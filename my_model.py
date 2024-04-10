@@ -22,3 +22,17 @@ class ImageFeatureExtractor(nn.Module):
         # 将特征图展平
         x = x.view(x.size(0), -1)
         return x
+    
+
+class QuesEmbedding(nn.Module):
+    def __init__(self, input_size=500, output_size=1024, num_layers=1, batch_first=True):
+        super(QuesEmbedding, self).__init__()
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=output_size, batch_first=batch_first)
+
+    def forward(self, ques):
+        # seq_len * N * 500 -> (1 * N * 1024, 1 * N * 1024)
+        _, hx = self.lstm(ques)
+        # (1 * N * 1024, 1 * N * 1024) -> 1 * N * 1024
+        h, _ = hx
+        ques_embedding = h[0]
+        return ques_embedding
