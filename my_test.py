@@ -1,10 +1,13 @@
 import unittest
 import torch
 import torch.nn as nn
-from torchvision import transforms
+from torchvision import transforms, models
 from my_vqadata import VQADataset
-from model import ImageFeatureExtractor, QuesEmbedding
+from my_model import ImageFeatureExtractor, QuesEmbedding, VisualExtractor
 from torch.utils.data import DataLoader
+from modules.utils import parse_agrs
+from modules.encoder_decoder import EncoderDecoder
+from modules.tokenizers import Tokenizer
 
 
 class TestImageFeatureExtractor(unittest.TestCase):
@@ -26,6 +29,30 @@ class TestImageFeatureExtractor(unittest.TestCase):
 
         # 检查特征形状是否正确（对于 resnet50，特征形状应为 (2, 2048)）
         self.assertEqual(features.shape, (1, 2048))
+
+class TestVisualExtractor(unittest.TestCase):
+    def setUp(self):
+        self.model = VisualExtractor(pretrained=False)
+        self.images = torch.randn(4, 3, 224, 224)  # 4 images, 3 color channels, 224x224 pixels
+
+    def test_forward(self):
+        # Testing forward pass
+        patch_feats, avg_feats = self.model(self.images)
+        self.assertEqual(patch_feats.shape, (4, 49, 2048))  # Expected shape based on ResNet output and processing
+        self.assertEqual(avg_feats.shape, (4, 2048))       # Averaged features should be (batch_size, feat_size)
+
+    def test_output_types(self):
+        # Testing output types
+        patch_feats, avg_feats = self.model(self.images)
+        self.assertIsInstance(patch_feats, torch.Tensor)
+        self.assertIsInstance(avg_feats, torch.Tensor)
+
+    def test_no_error(self):
+        # Testing that no error is raised
+        try:
+            patch_feats, avg_feats = self.model(self.images)
+        except Exception as e:
+            self.fail(f"Forward pass raised an exception {e}")
 
 
 class TestVQADataset(unittest.TestCase):
@@ -82,6 +109,35 @@ class TestQuesEmbedding(unittest.TestCase):
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, expected_shape)
         
+
+class TestPrepareFeature(unittest.TestCase):
+
+    def setUp(self):
+        # 初始化模型和参数
+        args = parse_agrs()
+        self.num_features = 2048
+        self.seq_length = 10
+        self.tokenizer = Tokenizer(args)
+        self.model = EncoderDecoder(args, self.tokenizer, mode = None)  # 假设args包含了所需的所有配置
+
+        # 模拟图像特征
+        self.fc_feats = torch.randn(args.batch_size, self.num_features, 7*7)
+        # 模拟文本特征
+        self.att_feats = torch.randn(args.batch_size, self.seq_length, self.num_features)
+        # 模拟注意力掩码
+        self.att_masks = torch.ones(args.batch_size, self.seq_length)
+        self.labels = torch.randint(0, 1, (args.batch_size, self.seq_length))
+
+    def test_prepare_feature(self):
+        # 调用 _prepare_feature 方法
+        memory, _, _, _, _, _ = self.model._prepare_feature(self.fc_feats, self.att_feats, self.att_masks, self.labels)
+
+        # 检查编码器输出的特征和注意力掩码
+        # 这里我们假设编码器输出的特征形状为 (batch_size, seq_length, hidden_size)
+        # 并且注意力掩码的形状与输入的文本特征形状一致
+        self.assertEqual(memory.shape, (self.batch_size, self.seq_length, self.model.d_model))
+        self.assertEqual(self.att_masks.shape, (self.batch_size, self.seq_length))
+
 
 if __name__ == '__main__':
     unittest.main()
