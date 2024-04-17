@@ -1,4 +1,22 @@
-# Shared Cross-modal Prototype Matrix
+# VQA架构
+在VQA任务中，通常会涉及以下几个主要组件：
+
+- 视觉提取网络（Visual Extraction Network）：
+这个网络部分通常使用预训练的卷积神经网络（CNN）如ResNet、VGG或更高级的视觉Transformer模型来处理输入的图像，并提取图像的特征表示。这些特征能够捕捉图像中的重要视觉信息，如物体的形状、颜色和空间关系等。
+
+- 文本提取网络（Textual Extraction Network）：
+文本部分一般使用自然语言处理模型，如LSTM、GRU或Transformer-based模型（如BERT、GPT等），来处理问题文本。这些模型能够理解和编码问题的语义内容，包括关键词和语法结构。
+
+- 融合网络（Fusion Network）：
+在提取了视觉和文本特征之后，融合网络将这些特征整合到一起，创建一个联合的特征表示，这对于理解问题并将其与视觉内容联系起来是必要的。融合策略可以简单如拼接（concatenation）或复杂如注意力机制（attention mechanisms）、图神经网络（GNNs）等，以更动态地结合视觉和文本信息。
+
+- 答案网络（Answer Network）：
+这是最终的分类或回归网络，用于生成或选择答案。根据任务的不同，答案可能是开放式的（需要生成文本答案）或封闭式的（从预设的答案列表中选择）。答案网络通常是一两层的全连接网络，输出层的设计依赖于答案的类型（例如，使用softmax输出层来处理多类分类任务）。
+
+
+# Prototype
+
+## Shared Cross-modal Prototype Matrix
 
 实现了Shared Cross-modal Prototype Matrix的功能的关键方法包括：
 

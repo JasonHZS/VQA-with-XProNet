@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
+import torch.nn.functional as F
 
 class ImageFeatureExtractor(nn.Module):
     def __init__(self, pretrained=True):
@@ -56,16 +57,15 @@ class QuesEmbedding(nn.Module):
 
 
 class XProNet(nn.Module):
+    """
+    代替 vqa 任务中的 fusion 网络？？？
+    """
     def __init__(self, args, tokenizer, mode = 'train'):
         super(XProNet, self).__init__()
         self.args = args
         self.tokenizer = tokenizer
         self.visual_extractor = ImageFeatureExtractor(args)
         self.encoder_decoder = QuesEmbedding(args, tokenizer, mode = mode)
-        #if args.dataset_name == 'iu_xray':
-        #    self.forward = self.forward_iu_xray
-        #else:
-        #    self.forward = self.forward_mimic_cxr
 
     def __str__(self):
         model_parameters = filter(lambda p: p.requires_grad, self.parameters())
@@ -73,28 +73,54 @@ class XProNet(nn.Module):
         return super().__str__() + '\nTrainable parameters: {}'.format(params)
 
     def forward(self, images, targets=None, labels=None, mode='train', update_opts={}):
-        if self.args.dataset_name=='iu_xray':
-            att_feats_0, fc_feats_0 = self.visual_extractor(images[:, 0])
-            att_feats_1, fc_feats_1 = self.visual_extractor(images[:, 1])
-
-            fc_feats = torch.cat((fc_feats_0, fc_feats_1), dim=1)
-            att_feats = torch.cat((att_feats_0, att_feats_1), dim=1)
-            if mode == 'train':
-                output = self.encoder_decoder(fc_feats, att_feats, targets, labels = labels, mode='forward')
-                return output
-            elif mode == 'sample':
-                output, output_probs = self.encoder_decoder(fc_feats, att_feats, labels = labels, mode='sample', update_opts=update_opts)
-                return output, output_probs
-            else:
-                raise ValueError
-
+        att_feats, fc_feats = self.visual_extractor(images)
+        if mode == 'train':
+            output = self.encoder_decoder(fc_feats, att_feats, targets, labels=labels, mode='forward')
+            return output
+        elif mode == 'sample':
+            output, output_probs = self.encoder_decoder(fc_feats, att_feats, labels=labels, mode='sample', update_opts=update_opts)
+            return output, output_probs
         else:
-            att_feats, fc_feats = self.visual_extractor(images)
-            if mode == 'train':
-                output = self.encoder_decoder(fc_feats, att_feats, targets, labels=labels, mode='forward')
-                return output
-            elif mode == 'sample':
-                output, output_probs = self.encoder_decoder(fc_feats, att_feats, labels=labels, mode='sample', update_opts=update_opts)
-                return output, output_probs
-            else:
-                raise ValueError
+            raise ValueError
+    
+
+class MutanFusion(nn.Module):
+    def __init__(self, input_dim, out_dim, num_layers):
+        super(MutanFusion, self).__init__()
+        self.input_dim = input_dim
+        self.out_dim = out_dim
+        self.num_layers = num_layers
+
+        hv = []
+        for i in range(self.num_layers):
+            do = nn.Dropout(p=0.5)
+            lin = nn.Linear(input_dim, out_dim)
+
+            hv.append(nn.Sequential(do, lin, nn.Tanh()))
+        #
+        self.image_transformation_layers = nn.ModuleList(hv)
+        #
+        hq = []
+        for i in range(self.num_layers):
+            do = nn.Dropout(p=0.5)
+            lin = nn.Linear(input_dim, out_dim)
+            hq.append(nn.Sequential(do, lin, nn.Tanh()))
+        #
+        self.ques_transformation_layers = nn.ModuleList(hq)
+
+    def forward(self, ques_emb, img_emb):
+        # Pdb().set_trace()
+        batch_size = img_emb.size()[0]
+        x_mm = []
+        for i in range(self.num_layers):
+            x_hv = img_emb
+            x_hv = self.image_transformation_layers[i](x_hv)
+
+            x_hq = ques_emb
+            x_hq = self.ques_transformation_layers[i](x_hq)
+            x_mm.append(torch.mul(x_hq, x_hv))
+        #
+        x_mm = torch.stack(x_mm, dim=1)
+        x_mm = x_mm.sum(1).view(batch_size, self.out_dim)
+        x_mm = F.tanh(x_mm)
+        return x_mm

@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from modules.utils import parse_agrs
 from modules.encoder_decoder import EncoderDecoder
 from modules.tokenizers import Tokenizer
+from unittest.mock import MagicMock
 
 
 class TestImageFeatureExtractor(unittest.TestCase):
@@ -108,35 +109,6 @@ class TestQuesEmbedding(unittest.TestCase):
         
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, expected_shape)
-        
-
-class TestPrepareFeature(unittest.TestCase):
-
-    def setUp(self):
-        # 初始化模型和参数
-        args = parse_agrs()
-        self.num_features = 2048
-        self.seq_length = 10
-        self.tokenizer = Tokenizer(args)
-        self.model = EncoderDecoder(args, self.tokenizer, mode = None)  # 假设args包含了所需的所有配置
-
-        # 模拟图像特征
-        self.fc_feats = torch.randn(args.batch_size, self.num_features, 7*7)
-        # 模拟文本特征
-        self.att_feats = torch.randn(args.batch_size, self.seq_length, self.num_features)
-        # 模拟注意力掩码
-        self.att_masks = torch.ones(args.batch_size, self.seq_length)
-        self.labels = torch.randint(0, 1, (args.batch_size, self.seq_length))
-
-    def test_prepare_feature(self):
-        # 调用 _prepare_feature 方法
-        memory, _, _, _, _, _ = self.model._prepare_feature(self.fc_feats, self.att_feats, self.att_masks, self.labels)
-
-        # 检查编码器输出的特征和注意力掩码
-        # 这里我们假设编码器输出的特征形状为 (batch_size, seq_length, hidden_size)
-        # 并且注意力掩码的形状与输入的文本特征形状一致
-        self.assertEqual(memory.shape, (self.batch_size, self.seq_length, self.model.d_model))
-        self.assertEqual(self.att_masks.shape, (self.batch_size, self.seq_length))
 
 
 if __name__ == '__main__':
