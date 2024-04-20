@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader
 
 class VQADataset(Dataset):
     def __init__(self, transform=None):
-        self.json_file = "/root/vqa/VQA-with-XProNet/data/new_dataset_release/train_qs_data.json"
-        self.img_dir = "/root/vqa/VQA-with-XProNet/data/new_dataset_release/images"
+        self.json_file = "/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/data/new_dataset_release/train_qs_data.json"
+        self.img_dir = "/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/data/new_dataset_release/images"
         with open(self.json_file, 'r') as f:
             self.data = json.load(f)
         self.keys = list(self.data.keys())

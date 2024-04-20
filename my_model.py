@@ -5,6 +5,9 @@ from torchvision import models
 import torch.nn.functional as F
 
 class ImageFeatureExtractor(nn.Module):
+    """
+    暂时不用
+    """
     def __init__(self, pretrained=True):
         super(ImageFeatureExtractor, self).__init__()
         # 加载预训练的 ResNet
@@ -30,11 +33,17 @@ class VisualExtractor(nn.Module):
     """
     input:
     输入的 images 通过一个 ResNet50 模型（没有最后两层）来提取特征。
-    通常，ResNet50 在使用默认的 ImageNet 预训练模型时，
-    接收形状为 (batch_size, 3, 224, 224) 的输入并输出形状为 (batch_size, 2048, 7, 7) 的特征图（这是在去掉完全连接层和最后一个池化层后的结果）。
+    通常，ResNet50 接收形状为 (batch_size, 3, 224, 224) 的输入，
+    并输出形状为 (batch_size, 2048, 7, 7) 的特征图（这是在去掉完全连接层和最后一个池化层后的结果）。
+
     output:
     patch_feats: (batch_size, 49, 2048)
+        这里 49 是 7x7 网格展平后的结果。
+        这种重塑操作意味着每一个 49 个元素代表一个 "patch"（或区块），
+        每个 patch 是一个 2048 维的向量，表示从原始图像的特定区域中提取的特征。
     avg_feats: (batch_size, 2048)
+
+    TODO：提取特征后可以先保存到文件中
     """
     def __init__(self, pretrained=True):
         super(VisualExtractor, self).__init__()
@@ -53,16 +62,21 @@ class VisualExtractor(nn.Module):
 
 
 class QuesEmbedding(nn.Module):
+    """
+    input:
+        output_size:指单层输出的维度，但是最后 return 的维度是 output_size*2
+    输入为问题的词嵌入（不是原始文本），输出为提取的特征。
+    """
     def __init__(self, input_size=500, output_size=1024, num_layers=1, batch_first=True):
         super(QuesEmbedding, self).__init__()
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=output_size, batch_first=batch_first)
 
     def forward(self, ques):
-        # seq_len * N * 500 -> (1 * N * 1024, 1 * N * 1024)
         _, hx = self.lstm(ques)
-        # (1 * N * 1024, 1 * N * 1024) -> 1 * N * 1024
-        h, _ = hx
-        ques_embedding = h[0]
+        # h, _ = hx
+        # ques_embedding = h[0]
+        lstm_embedding = torch.cat([hx[0], hx[1]], dim=2) # 拼接后的维度为output_size*2
+        ques_embedding = lstm_embedding[0]
         return ques_embedding
 
 
@@ -136,44 +150,45 @@ class MutanFusion(nn.Module):
         return x_mm
 
 
-# class VQAModel(nn.Module):
+class VQAModel(nn.Module):
 
-#     def __init__(self, vocab_size=10000, word_emb_size=300, emb_size=1024, output_size=1000, image_channel_type='I', ques_channel_type='lstm', use_mutan=True, mode='train', extract_img_features=True, features_dir=None):
-#         super(VQAModel, self).__init__()
-#         self.mode = mode
-#         self.word_emb_size = word_emb_size
-#         self.image_channel = ImageEmbedding(image_channel_type, output_size=emb_size, mode=mode,
-#                                             extract_features=extract_img_features, features_dir=features_dir)
+    def __init__(self, vocab_size=10000, word_emb_size=300, emb_size=2048, output_size=1000, ques_channel_type='lstm', 
+                use_mutan=True, extract_img_features=True, features_dir=None):
+        super(VQAModel, self).__init__()
+        # self.mode = mode # 'train' or 'eval'
+        self.word_emb_size = word_emb_size
+        self.visual_extractor = VisualExtractor(pretrained=True)
 
-#         # NOTE the padding_idx below.
-#         self.word_embeddings = nn.Embedding(vocab_size, word_emb_size)
-#         if ques_channel_type.lower() == 'lstm':
-#             self.ques_channel = QuesEmbedding(
-#                 input_size=word_emb_size, output_size=emb_size, num_layers=1, batch_first=False)
-#         elif ques_channel_type.lower() == 'deeplstm':
-#             self.ques_channel = QuesEmbedding(
-#                 input_size=word_emb_size, output_size=emb_size, num_layers=2, batch_first=False)
-#         else:
-#             msg = 'ques channel type not specified. please choose one of -  lstm or deeplstm'
-#             print(msg)
-#             raise Exception(msg)
-#         if use_mutan:
-#             self.mutan = MutanFusion(emb_size, emb_size, 5)
-#             self.mlp = nn.Sequential(nn.Linear(emb_size, output_size))
-#         else:
-#             self.mlp = nn.Sequential(
-#                 nn.Linear(emb_size, 1000),
-#                 nn.Dropout(p=0.5),
-#                 nn.Tanh(),
-#                 nn.Linear(1000, output_size))
+        # NOTE the padding_idx below.
+        self.word_embeddings = nn.Embedding(vocab_size, word_emb_size)
 
-#     def forward(self, images, questions, image_ids):
-#         image_embeddings = self.image_channel(images, image_ids)
-#         embeds = self.word_embeddings(questions)
-#         ques_embeddings = self.ques_channel(embeds)
-#         if hasattr(self, 'mutan'):
-#             combined = self.mutan(ques_embeddings, image_embeddings)
-#         else:
-#             combined = image_embeddings * ques_embeddings
-#         output = self.mlp(combined)
-#         return output
+        if ques_channel_type.lower() == 'lstm':
+            self.ques_embedding = QuesEmbedding(
+                input_size=word_emb_size, output_size=int(emb_size/2), num_layers=1, batch_first=False)
+        elif ques_channel_type.lower() == 'deeplstm':
+            self.ques_embedding = QuesEmbedding(
+                input_size=word_emb_size, output_size=emb_size, num_layers=2, batch_first=False)
+        else:
+            msg = 'ques channel type not specified. please choose one of -  lstm or deeplstm'
+            print(msg)
+            raise Exception(msg)
+        
+        if use_mutan:
+            self.mutan = MutanFusion(emb_size, emb_size, 5)
+            self.mlp = nn.Sequential(nn.Linear(emb_size, output_size))
+        else:
+            self.mlp = nn.Sequential(
+                nn.Linear(emb_size, 1000),
+                nn.Dropout(p=0.5),
+                nn.Tanh(),
+                nn.Linear(1000, output_size))
+
+    def forward(self, images, questions):
+        patch_feats, avg_feats = self.visual_extractor(images)
+        # print('视觉特征：', avg_feats.shape)
+        embeds = self.word_embeddings(questions)
+        ques_embeddings = self.ques_embedding(embeds)
+        # print('文本特征：', ques_embeddings.shape)
+        combined = self.mutan(ques_embeddings, avg_feats)
+        output = self.mlp(combined)
+        return output
