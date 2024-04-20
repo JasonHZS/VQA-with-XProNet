@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torchvision import transforms, models
 from my_vqadata import VQADataset
-from my_model import ImageFeatureExtractor, QuesEmbedding, VisualExtractor
+from my_model import ImageFeatureExtractor, QuesEmbedding, VisualExtractor, MutanFusion
 from torch.utils.data import DataLoader
 from modules.utils import parse_agrs
 from modules.encoder_decoder import EncoderDecoder
@@ -30,6 +30,7 @@ class TestImageFeatureExtractor(unittest.TestCase):
 
         # 检查特征形状是否正确（对于 resnet50，特征形状应为 (2, 2048)）
         self.assertEqual(features.shape, (1, 2048))
+
 
 class TestVisualExtractor(unittest.TestCase):
     def setUp(self):
@@ -109,6 +110,34 @@ class TestQuesEmbedding(unittest.TestCase):
         
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, expected_shape)
+
+
+class TestMutanFusionIntegration(unittest.TestCase):
+    def setUp(self):
+        # 初始化视觉提取器
+        self.visual_extractor = VisualExtractor(pretrained=False)
+        # 初始化问题嵌入模块
+        self.ques_embedding = QuesEmbedding(input_size=500, output_size=1024, num_layers=1, batch_first=True)
+        # 初始化 MutanFusion 模块
+        self.mutan_fusion = MutanFusion(input_dim=1024, out_dim=1024, num_layers=3)
+
+        # 创建一些虚拟的数据输入
+        self.dummy_images = torch.rand(10, 3, 224, 224)  # 假设有10个图像，每个图像为224x224大小，3通道
+        self.dummy_questions = torch.rand(10, 10, 500)  # 假设有10个问题，每个问题是长度为10的序列，每个序列元素500维
+
+    def test_integration(self):
+        # 通过视觉提取器处理图像
+        patch_feats, avg_feats = self.visual_extractor(self.dummy_images)
+        # 通过问题嵌入模块处理问题
+        ques_embed = self.ques_embedding(self.dummy_questions)
+        # 通过 MutanFusion 模块处理融合
+        fusion_output = self.mutan_fusion(ques_embed, avg_feats)
+
+        # 检查融合输出的形状是否正确
+        self.assertEqual(fusion_output.shape, (10, 1024))
+
+        # 进一步测试输出是否为非空
+        self.assertFalse(torch.isnan(fusion_output).any())
 
 
 if __name__ == '__main__':
