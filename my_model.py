@@ -69,7 +69,7 @@ class QuesEmbedding(nn.Module):
     """
     def __init__(self, input_size=500, output_size=1024, num_layers=1, batch_first=True):
         super(QuesEmbedding, self).__init__()
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=output_size, batch_first=batch_first)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=output_size, batch_first=True)
 
     def forward(self, ques):
         _, hx = self.lstm(ques)
@@ -119,7 +119,6 @@ class MutanFusion(nn.Module):
         for i in range(self.num_layers):
             do = nn.Dropout(p=0.5)
             lin = nn.Linear(input_dim, out_dim)
-
             hv.append(nn.Sequential(do, lin, nn.Tanh()))
         #
         self.image_transformation_layers = nn.ModuleList(hv)
@@ -133,7 +132,6 @@ class MutanFusion(nn.Module):
         self.ques_transformation_layers = nn.ModuleList(hq)
 
     def forward(self, ques_emb, img_emb):
-        # Pdb().set_trace()
         batch_size = img_emb.size()[0]
         x_mm = []
         for i in range(self.num_layers):
@@ -142,17 +140,23 @@ class MutanFusion(nn.Module):
 
             x_hq = ques_emb
             x_hq = self.ques_transformation_layers[i](x_hq)
+
             x_mm.append(torch.mul(x_hq, x_hv))
-        #
+        
         x_mm = torch.stack(x_mm, dim=1)
         x_mm = x_mm.sum(1).view(batch_size, self.out_dim)
         x_mm = F.tanh(x_mm)
         return x_mm
 
 
-class VQAModel(nn.Module):
 
-    def __init__(self, vocab_size=10000, word_emb_size=300, emb_size=2048, output_size=1000, ques_channel_type='lstm', 
+class VQAModel(nn.Module):
+    """
+    vocab_size与output_size保持一致，因为VQAModel最后输出的维度取决于词汇表的大小，
+    所以模型最后输入的是最大概率的那个维度的索引
+    """
+
+    def __init__(self, vocab_size=1000, word_emb_size=300, emb_size=2048, output_size=1000, ques_channel_type='lstm', 
                 use_mutan=True, extract_img_features=True, features_dir=None):
         super(VQAModel, self).__init__()
         # self.mode = mode # 'train' or 'eval'
