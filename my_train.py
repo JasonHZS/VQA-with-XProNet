@@ -144,18 +144,25 @@ def train_model(model, data_loaders, vocab, criterion, optimizer, scheduler, sav
     return model
 
 
-def validate(model, dataloader, criterion, use_gpu=False):
+def validate(model, dataloader, vocab, criterion, use_gpu=False):
     model.eval()  # Set model to evaluate mode
     running_loss = 0.0
     running_corrects = 0
     example_count = 0
     # Iterate over data.
-    for questions, images, image_ids, answers, ques_ids in dataloader:
+    for questions, images, answers in dataloader:
+        # 随机取answers中的某个单词（用于）
+        answers = [answer.split()[1] if len(answer.split()) > 1 else answer for answer in answers]
+
+        print("answers真实值：", answers)
+        questions = text2tensor(questions, vocab) 
+        answers = text2tensor(answers, vocab)
+        # 确保 answers 是1D张量
+        answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
+        print("answers:", answers)
         if use_gpu:
-            questions, images, image_ids, answers = questions.cuda(
-            ), images.cuda(), image_ids.cuda(), answers.cuda()
-        questions, images, answers = Variable(questions).transpose(
-            0, 1), Variable(images), Variable(answers)
+            questions, images, image_ids, answers = questions.cuda(), images.cuda(), image_ids.cuda(), answers.cuda()
+        questions, images, answers = Variable(questions).transpose(0, 1), Variable(images), Variable(answers)
 
         # zero grad
         ans_scores = model(images, questions, image_ids)
