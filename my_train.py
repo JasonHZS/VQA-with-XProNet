@@ -18,17 +18,6 @@ def text2tensor(quest_list, vocab):
     padded_tensor = torch.nn.utils.rnn.pad_sequence(tensor_list, batch_first=True, padding_value=vocab['<pad>'])
     return padded_tensor
 
-# def text2tensor(quest_list, vocab):
-#        label_size = len(vocab)  # 词汇表的大小
-#        tensor_list = []
-#        for text in quest_list:
-#               labels = torch.zeros(label_size, dtype=torch.float)  # 创建一个全0的张量
-#               for word in text.split():
-#                      index = vocab.get(word, vocab['<unk>'])  # 获取单词索引
-#                      labels[index] = 1  # 将对应的索引位置设置为1
-#               tensor_list.append(labels)
-#        return torch.stack(tensor_list, dim=0)  # 堆叠生成一个batch的标签数据
-
 
 def train(model, dataloader, vocab, criterion, optimizer, use_gpu=False):
     model.train()  # Set model to training mode
