@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from my_vqadata import VQADataset 
-from my_train import train_model, test_model
+from my_train import train_model, validate
 from my_model import VQAModel
 
 
@@ -27,8 +27,8 @@ train_dataset.vocab.update(test_dataset.vocab)
 vocab_size = len(train_dataset.vocab)
 print("vocab_size:", vocab_size)
 
-train_loader = DataLoader(train_dataset, batch_size=5, shuffle=True, drop_last=True)
-val_loader = DataLoader(test_dataset, batch_size=5, shuffle=False, drop_last=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, drop_last=True)
+val_loader = DataLoader(test_dataset, batch_size=10, shuffle=False, drop_last=True)
 data_loaders = {'train': train_loader, 'val': val_loader}
 
 model = VQAModel(vocab_size=vocab_size, output_size=vocab_size)
@@ -45,9 +45,8 @@ model = train_model(model,
                     scheduler=None,
                     save_dir=save_dir,
                     num_epochs=1, 
-                    use_gpu=False, 
                     best_accuracy=best_acc, 
                     start_epoch=startEpoch
                     )
-                    
+# loss, acc = validate(model, val_loader, train_dataset.vocab, criterion)
                     
