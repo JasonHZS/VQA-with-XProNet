@@ -81,3 +81,7 @@ class VQADataset(Dataset):
 #     for batch in data_loader:
 #             print(batch['image'].shape, batch['question'], batch['answer'])
 #             break  # 只打印第一批数据来检查
+
+    # print(torch.__version__)
+    # print(torch.cuda.is_available())
+

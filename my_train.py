@@ -19,17 +19,7 @@ def text2tensor(quest_list, vocab):
     return padded_tensor
 
 
-def train(model, dataloader, vocab, criterion, optimizer):
-     # 判断并选择设备
-    if torch.cuda.is_available():
-        device = torch.device("cuda")  # 优先使用CUDA（NVIDIA GPU）
-        print("Using CUDA (GPU)")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")  # 如果CUDA不可用但MPS可用，使用MPS（Apple Silicon）
-        print("Using MPS (Apple Silicon)")
-    else:
-        device = torch.device("cpu")  # 如果都不可用，使用CPU
-        print("Using CPU")
+def train(model, dataloader, vocab, device, criterion, optimizer):
 
     model.train()  # Set model to training mode
     running_loss = 0.0
@@ -44,18 +34,18 @@ def train(model, dataloader, vocab, criterion, optimizer):
         # 随机取answers中的某个单词（用于）
         answers = [answer.split()[1] if len(answer.split()) > 1 else answer for answer in answers]
 
-        print("answers真实值：", answers)
+        # print("answers真实值：", answers)
         questions = text2tensor(questions, vocab) 
         answers = text2tensor(answers, vocab)
         # 确保 answers 是1D张量
         answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
-        print("answers:", answers)
+        # print("answers:", answers)
         
         questions, images, answers = questions.to(device), images.to(device), answers.to(device)
         questions, images, answers = Variable(questions), Variable(images), Variable(answers)
     #    print("questions shape:",questions.size())
     #    print("images shape:",images.size())
-        print("answers shape:",answers.size())
+        # print("answers shape:",answers.size())
 
         # zero grad
         optimizer.zero_grad()
@@ -85,7 +75,7 @@ def train(model, dataloader, vocab, criterion, optimizer):
     return loss, acc
 
 
-def train_model(model, data_loaders, vocab, criterion, optimizer, scheduler, save_dir, num_epochs=1, 
+def train_model(model, data_loaders, vocab, device, criterion, optimizer, scheduler, save_dir, num_epochs=1, 
                 best_accuracy=0, start_epoch=0):
     since = time.time()
 
@@ -96,14 +86,14 @@ def train_model(model, data_loaders, vocab, criterion, optimizer, scheduler, sav
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
         train_begin = time.time()
-        train_loss, train_acc = train(model, data_loaders['train'], vocab, criterion, optimizer)
+        train_loss, train_acc = train(model, data_loaders['train'], vocab, device, criterion, optimizer)
         train_time = time.time() - train_begin
         print('Epoch Train Time: {:.0f}m {:.0f}s'.format(train_time // 60, train_time % 60))
         writer.add_scalar('Train Loss', train_loss, epoch)
         writer.add_scalar('Train Accuracy', train_acc, epoch)
 
         validation_begin = time.time()
-        val_loss, val_acc = validate(model, data_loaders['val'], vocab, criterion, use_gpu)
+        val_loss, val_acc = validate(model, data_loaders['val'], vocab, device, criterion)
         validation_time = time.time() - validation_begin
         print('Epoch Validation Time: {:.0f}m {:.0f}s'.format(validation_time // 60, validation_time % 60))
         writer.add_scalar('Validation Loss', val_loss, epoch)
@@ -148,37 +138,31 @@ def train_model(model, data_loaders, vocab, criterion, optimizer, scheduler, sav
     return model
 
 
-def validate(model, dataloader, vocab, criterion):
-    # 判断并选择设备
-    if torch.cuda.is_available():
-        device = torch.device("cuda")  # 优先使用CUDA（NVIDIA GPU）
-        print("Using CUDA (GPU)")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")  # 如果CUDA不可用但MPS可用，使用MPS（Apple Silicon）
-        print("Using MPS (Apple Silicon)")
-    else:
-        device = torch.device("cpu")  # 如果都不可用，使用CPU
-        print("Using CPU")
+def validate(model, dataloader, vocab, device, criterion):
 
     model.eval()  # Set model to evaluate mode
     running_loss = 0.0
     running_corrects = 0
     example_count = 0
-    # Iterate over data.
+    
     for batch in dataloader:
+        # 将文本的questions和answers进行词嵌入
         questions, images, answers = batch['question'], batch['image'], batch['answer']
         # 随机取answers中的某个单词（用于）
         answers = [answer.split()[1] if len(answer.split()) > 1 else answer for answer in answers]
 
-        print("answers真实值：", answers)
+        # print("answers真实值：", answers)
         questions = text2tensor(questions, vocab) 
         answers = text2tensor(answers, vocab)
         # 确保 answers 是1D张量
         answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
-        print("answers:", answers)
-
+        # print("answers:", answers)
+        
         questions, images, answers = questions.to(device), images.to(device), answers.to(device)
-        questions, images, answers = Variable(questions).transpose(0, 1), Variable(images), Variable(answers)
+        questions, images, answers = Variable(questions), Variable(images), Variable(answers)
+    #    print("questions shape:",questions.size())
+    #    print("images shape:",images.size())
+        # print("answers shape:",answers.size())
 
         # zero grad
         ans_scores = model(images, questions)
@@ -186,11 +170,11 @@ def validate(model, dataloader, vocab, criterion):
         loss = criterion(ans_scores, answers)
 
         # statistics
-        running_loss += loss.data[0]
+        running_loss += loss.item()
         running_corrects += torch.sum((preds == answers).data)
         example_count += answers.size(0)
+
     loss = running_loss / example_count
-    # acc = (running_corrects / example_count) * 100
     acc = (running_corrects / len(dataloader.dataset)) * 100
     print('Validation Loss: {:.4f} Acc: {:2.3f} ({}/{})'.format(loss,
                                                                 acc, running_corrects, example_count))

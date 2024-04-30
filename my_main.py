@@ -35,11 +35,25 @@ model = VQAModel(vocab_size=vocab_size, output_size=vocab_size)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                 lr=0.01, weight_decay=0.0005)
+
+# 判断并选择设备
+if torch.cuda.is_available():
+       device = torch.device("cuda")  # 优先使用CUDA（NVIDIA GPU）
+       print("Using CUDA (GPU)")
+elif torch.backends.mps.is_available():
+       device = torch.device("mps")  # 如果CUDA不可用但MPS可用，使用MPS（Apple Silicon）
+       print("Using MPS (Apple Silicon)")
+else:
+       device = torch.device("cpu")  # 如果都不可用，使用CPU
+       print("Using CPU")
+
+model.to(device)
 best_acc = 0
 save_dir = "/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/my_ckp"
 model = train_model(model, 
                     data_loaders, 
                     train_dataset.vocab,
+                    device,
                     criterion, 
                     optimizer, 
                     scheduler=None,
@@ -48,5 +62,7 @@ model = train_model(model,
                     best_accuracy=best_acc, 
                     start_epoch=startEpoch
                     )
-# loss, acc = validate(model, val_loader, train_dataset.vocab, criterion)
+
+# Best val Acc: 0.171527——2024 年 04 月 30 日 13:26:11
+# loss, acc = validate(model, val_loader, train_dataset.vocab, device, criterion)
                     
