@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os 
 
-data_path = '/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/data/KG_VQA/fvqa/exp_data/train_data/train2/all_qs_dict_release_train.json'
+data_path = '/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/data/KG_VQA/fvqa/exp_data/test_data/test4/all_qs_dict_release_test_500.json'
 
 # 读取 json 文件
 with open(data_path, 'r') as f:

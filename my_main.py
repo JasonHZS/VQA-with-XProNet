@@ -17,89 +17,82 @@ print("project_root:", project_root)
 train_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/train_data'
 sub_folders = ['train0', 'train1', 'train2', 'train3', 'train4']
 img_dir = project_root+"/data/KG_VQA/fvqa/exp_data/images/images"
-vocab_file = 'vocab.json'
-
+vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_train_500.json'
 # 初始化词汇表和数据集列表
 vocab = {}
-
 # 遍历每个子文件夹，加载数据集
 datasets = []
 for folder in sub_folders:
-       json_file = os.path.join(train_data_dir, folder, 'train.json')
+       json_file = os.path.join(train_data_dir, folder, 'all_qs_dict_release_train_500.json')
+       dataset = VQADataset(json_file=json_file, img_dir=img_dir, vocab_file=vocab_file)
+       datasets.append(dataset)
+       # 更新词汇表
+       vocab.update(dataset.vocab)
+# 合并所有数据集
+train_dataset = ConcatDataset(datasets)
+# 打印数据集大小
+print("train_dataset size:", len(train_dataset))
+# 词汇表大小
+vocab_size = len(vocab)
+print("train vocab_size:", vocab_size)
+# 创建数据加载器
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, drop_last=True)
+data_loaders = {'train': train_loader}
+
+
+test_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/test_data'
+sub_folders = ['test0', 'test1', 'test2', 'test3', 'test4']
+vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_test_500.json'
+datasets = []
+for folder in sub_folders:
+       json_file = os.path.join(test_data_dir, folder, 'all_qs_dict_release_test_500.json')
        dataset = VQADataset(json_file=json_file, img_dir=img_dir, vocab_file=vocab_file)
        datasets.append(dataset)
        # 更新词汇表
        vocab.update(dataset.vocab)
 
 # 合并所有数据集
-train_dataset = ConcatDataset(datasets)
-
+test_dataset = ConcatDataset(datasets)
+# 打印数据集大小
+print("test_dataset size:", len(test_dataset))
 # 词汇表大小
 vocab_size = len(vocab)
-print("vocab_size:", vocab_size)
-
-# 创建数据加载器
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, drop_last=True)
-data_loaders = {'train': train_loader}
-
-
-train_json_path = project_root+"/data/new_dataset_release/train_qs_data.json"
-test_json_path = project_root+"/data/new_dataset_release/test_qs_data.json"
-img_dir = project_root+"/data/new_dataset_release/images"
-train_vocab_file = project_root+"/data/new_dataset_release/train_vocab.json"
-test_vocab_file = project_root+"/data/new_dataset_release/test_vocab.json"
-
-# 创建数据集实例
-train_dataset = VQADataset(json_file=train_json_path, img_dir=img_dir, vocab_file=train_vocab_file)
-test_dataset = VQADataset(json_file=test_json_path, img_dir=img_dir, vocab_file=test_vocab_file)
-# 合并训练集和测试集的词汇表
-train_dataset.vocab.update(test_dataset.vocab)
-vocab_size = len(train_dataset.vocab)
-print("vocab_size:", vocab_size)
-
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, drop_last=True)
+print("all vocab_size:", vocab_size)
 val_loader = DataLoader(test_dataset, batch_size=10, shuffle=False, drop_last=True)
-data_loaders = {'train': train_loader, 'val': val_loader}
+data_loaders['val'] = val_loader
 
-model = VQAModel(vocab_size=vocab_size, output_size=vocab_size)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
-                     lr=0.01, weight_decay=0.0005)
+# model = VQAModel(vocab_size=vocab_size, output_size=vocab_size)
+# criterion = nn.CrossEntropyLoss()
+# optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+#                      lr=0.01, weight_decay=0.0005)
 
-# 判断并选择设备
-def select_device():
-       if torch.cuda.is_available():
-              device = torch.device("cuda")  # 优先使用CUDA（NVIDIA GPU）
-              print("Using CUDA (GPU)")
-       elif torch.backends.mps.is_available():
-              device = torch.device("mps")  # 如果CUDA不可用但MPS可用，使用MPS（Apple Silicon）
-              print("Using MPS (Apple Silicon)")
-       else:
-              device = torch.device("cpu")  # 如果都不可用，使用CPU
-              print("Using CPU")
-       return device
+# # 判断并选择设备
+# def select_device():
+#        if torch.cuda.is_available():
+#               device = torch.device("cuda")  # 优先使用CUDA（NVIDIA GPU）
+#               print("Using CUDA (GPU)")
+#        elif torch.backends.mps.is_available():
+#               device = torch.device("mps")  # 如果CUDA不可用但MPS可用，使用MPS（Apple Silicon）
+#               print("Using MPS (Apple Silicon)")
+#        else:
+#               device = torch.device("cpu")  # 如果都不可用，使用CPU
+#               print("Using CPU")
+#        return device
 
-device = select_device()
+# device = select_device()
 
-model.to(device)
-best_acc = 0
-save_dir = "/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/my_ckp"
-model = train_model(model, 
-              data_loaders, 
-              train_dataset.vocab,
-              device,
-              criterion, 
-              optimizer, 
-              scheduler=None,
-              save_dir=save_dir,
-              num_epochs=1, 
-              best_accuracy=best_acc, 
-              start_epoch=startEpoch
-       )
-
-# Train Loss: 3.9562 Acc: 0.193 (9/4660)
-# Epoch Train Time: 2m 37s
-# Validation Loss: 7.8746 Acc: 0.172 (2/1160)
-# Epoch Validation Time: 0m 11s
-# Training complete in 2m 49s
-# Best val Acc: 0.171527
+# model.to(device)
+# best_acc = 0
+# save_dir = "/Users/oasis/Documents/GitHub Project/VQA-with-XProNet/my_ckp"
+# model = train_model(model, 
+#               data_loaders, 
+#               train_dataset.vocab,
+#               device,
+#               criterion, 
+#               optimizer, 
+#               scheduler=None,
+#               save_dir=save_dir,
+#               num_epochs=1, 
+#               best_accuracy=best_acc, 
+#               start_epoch=startEpoch
+#        )

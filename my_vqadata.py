@@ -31,8 +31,8 @@ class VQADataset(Dataset):
             self.vocab = self.create_vocab(self.data)
             with open(self.vocab_file, 'w') as f:
                 json.dump(self.vocab, f)
-            with open(self.vocab_file+'_test', 'w') as f:
-                json.dump(self.vocab, f)
+            # with open(self.vocab_file+'_test', 'w') as f:
+            #     json.dump(self.vocab, f)
 
     def __len__(self):
         return len(self.keys)

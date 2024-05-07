@@ -112,7 +112,7 @@ def train_model(model, data_loaders, vocab, device, criterion, optimizer, schedu
             }, is_best)
 
         writer.export_scalars_to_json(save_dir + "/all_scalars.json")
-       #  valid_error = 1.0 - val_acc / 100.0
+        #  valid_error = 1.0 - val_acc / 100.0
         # if type(scheduler) == CustomReduceLROnPlateau:
         #     scheduler.step(valid_error, epoch=epoch)
         #     if scheduler.shouldStopTraining():
