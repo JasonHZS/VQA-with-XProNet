@@ -3,7 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 
 from my_vqadata import VQADataset 
 from my_train import train_model, validate
@@ -13,6 +13,36 @@ from my_model import VQAModel
 startEpoch = 0
 project_root = os.getcwd()
 print("project_root:", project_root)
+
+train_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/train_data'
+sub_folders = ['train0', 'train1', 'train2', 'train3', 'train4']
+img_dir = project_root+"/data/KG_VQA/fvqa/exp_data/images/images"
+vocab_file = 'vocab.json'
+
+# 初始化词汇表和数据集列表
+vocab = {}
+
+# 遍历每个子文件夹，加载数据集
+datasets = []
+for folder in sub_folders:
+       json_file = os.path.join(train_data_dir, folder, 'train.json')
+       dataset = VQADataset(json_file=json_file, img_dir=img_dir, vocab_file=vocab_file)
+       datasets.append(dataset)
+       # 更新词汇表
+       vocab.update(dataset.vocab)
+
+# 合并所有数据集
+train_dataset = ConcatDataset(datasets)
+
+# 词汇表大小
+vocab_size = len(vocab)
+print("vocab_size:", vocab_size)
+
+# 创建数据加载器
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, drop_last=True)
+data_loaders = {'train': train_loader}
+
+
 train_json_path = project_root+"/data/new_dataset_release/train_qs_data.json"
 test_json_path = project_root+"/data/new_dataset_release/test_qs_data.json"
 img_dir = project_root+"/data/new_dataset_release/images"
