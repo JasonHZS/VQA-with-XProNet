@@ -8,7 +8,7 @@ from IPython.core.debugger import Pdb
 
 class ImageEmbedding(nn.Module):
     def __init__(self, output_size=1024, mode='train',
-                 extract_features=False, features_dir=None):
+        extract_features=False, features_dir=None):
         super(ImageEmbedding, self).__init__()
         # Pdb().set_trace()
         self.cnn = models.vgg16(pretrained=True).features

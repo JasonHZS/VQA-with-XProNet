@@ -7,7 +7,6 @@ from torch.autograd import Variable
 from scheduler import CustomReduceLROnPlateau
 import json
 
-
 def text2tensor(quest_list, vocab):
     """将文本转换为索引列表（张量）"""
     # 将每个问题的单词转换为相应的索引
@@ -37,20 +36,18 @@ def train(model, dataloader, vocab, device, criterion, optimizer):
         # print("answers真实值：", answers)
         questions = text2tensor(questions, vocab) 
         answers = text2tensor(answers, vocab)
+
         # 确保 answers 是1D张量
         answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
         # print("answers:", answers)
         
         questions, images, answers = questions.to(device), images.to(device), answers.to(device)
-        questions, images, answers = Variable(questions), Variable(images), Variable(answers)
     #    print("questions shape:",questions.size())
     #    print("images shape:",images.size())
-        # print("answers shape:",answers.size())
 
         # zero grad
         optimizer.zero_grad()
         ans_scores = model(images, questions)
-        # print("ans_scores shape:", ans_scores.size())
         _, preds = torch.max(ans_scores, 1)
     #    print("preds:", preds)
         loss = criterion(ans_scores, answers)
@@ -64,13 +61,15 @@ def train(model, dataloader, vocab, device, criterion, optimizer):
         running_corrects += torch.sum((preds == answers).data)
         example_count += answers.size(0)
         step += 1
-        if step % 5000 == 0:
-                print('running loss: {}, running_corrects: {}, example_count: {}, acc: {}'.format(
-                        running_loss / example_count, running_corrects, example_count, (float(running_corrects) / example_count) * 100))
+        if step % 100 == 0:
+                print('running loss: {}, running_corrects: {}, example_count: {}, acc: {}%'.format(
+                        running_loss / example_count, 
+                        running_corrects, example_count,
+                        round(float(running_corrects) / example_count, 6) * 100))
         # if step * batch_size == 40000:
         #     break
     loss = running_loss / example_count
-    acc = (running_corrects / len(dataloader.dataset)) * 100
+    acc = (running_corrects / example_count) * 100
     print('Train Loss: {:.4f} Acc: {:2.3f} ({}/{})'.format(loss, acc, running_corrects, example_count))
     return loss, acc
 
@@ -125,8 +124,7 @@ def train_model(model, data_loaders, vocab, device, criterion, optimizer, schedu
         #     scheduler.step()
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60))
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
     # load best model weights
     model.load_state_dict(best_model_wts)
@@ -155,11 +153,10 @@ def validate(model, dataloader, vocab, device, criterion):
         questions = text2tensor(questions, vocab) 
         answers = text2tensor(answers, vocab)
         # 确保 answers 是1D张量
-        answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
+        # answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
         # print("answers:", answers)
         
         questions, images, answers = questions.to(device), images.to(device), answers.to(device)
-        questions, images, answers = Variable(questions), Variable(images), Variable(answers)
     #    print("questions shape:",questions.size())
     #    print("images shape:",images.size())
         # print("answers shape:",answers.size())

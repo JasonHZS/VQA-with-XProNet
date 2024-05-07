@@ -42,7 +42,7 @@ class VQADataset(Dataset):
         item = self.data[key]
         img_path = os.path.join(self.img_dir, item['img_file'])
         image = Image.open(img_path).convert('RGB')
-        if self.transform:
+        if self.transform: 
             image = self.transform(image)
 
         answer = item['answer']

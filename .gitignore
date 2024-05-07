@@ -117,3 +117,5 @@ config/all
 
 # data
 data/
+data0/
+my_ckp/
