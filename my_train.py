@@ -153,7 +153,7 @@ def validate(model, dataloader, vocab, device, criterion):
         questions = text2tensor(questions, vocab) 
         answers = text2tensor(answers, vocab)
         # 确保 answers 是1D张量
-        # answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
+        answers = answers.squeeze(1)  # 这一步会移除尺寸为1的维度
         # print("answers:", answers)
         
         questions, images, answers = questions.to(device), images.to(device), answers.to(device)
