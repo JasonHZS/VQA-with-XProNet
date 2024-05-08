@@ -33,11 +33,11 @@ def setup_data_loader(datasets, batch_size=10, shuffle=True, drop_last=True):
         loaders[key] = loader
     return loaders
 
-train_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/train_data'
-test_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/test_data'
+train_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/train_seen_data'
+test_data_dir = project_root+'/data/KG_VQA/fvqa/exp_data/test_unseen_data'
 img_dir = project_root+"/data/KG_VQA/fvqa/exp_data/images/images"
-train_vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_train_500.json'
-test_vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_test_500.json'
+train_vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_train_500_zs.json'
+test_vocab_file = project_root+'/data/KG_VQA/fvqa/exp_data/common_data/vocab_test_500_zs.json'
 
 sub_folders_train = ['train0', 'train1', 'train2', 'train3', 'train4']
 sub_folders_test = ['test0', 'test1', 'test2', 'test3', 'test4']
@@ -83,15 +83,19 @@ model = train_model(model,
               optimizer, 
               scheduler=None,
               save_dir=save_dir,
-              num_epochs=10, 
+              num_epochs=3, 
               best_accuracy=best_acc, 
               start_epoch=startEpoch
        )
 
 # validate(model, data_loaders['val'], full_vocab, device, criterion)
-# Train Loss: 0.5901 Acc: 2.322 (320/13780)
-# Epoch Train Time: 2m 54s
-# Validation Loss: 1.2014 Acc: 0.080 (11/13670)
+
+# F-VQA：
 # Epoch Validation Time: 1m 44s
 # Training complete in 46m 31s
-# Best val Acc: 4.760512
+# Best val Acc(Hit@1): 4.760512%
+
+# ZS-VQA：
+# Epoch Validation Time: 1m 44s
+# Training complete in 13m 50s
+# Best val Acc(Hit@1): 1.043629%

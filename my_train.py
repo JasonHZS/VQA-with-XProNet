@@ -163,17 +163,21 @@ def validate(model, dataloader, vocab, device, criterion):
 
         # zero grad
         ans_scores = model(images, questions)
-        _, preds = torch.max(ans_scores, 1)
         loss = criterion(ans_scores, answers)
+
+        # _, preds = torch.max(ans_scores, 1)
+        _, topk_preds = torch.topk(ans_scores, k=5, dim=1)
+        correct = topk_preds.eq(answers.view(-1, 1).expand_as(topk_preds))
+        running_corrects += correct.sum().item()
 
         # statistics
         running_loss += loss.item()
-        running_corrects += torch.sum((preds == answers).data)
+        # running_corrects += torch.sum((preds == answers).data)
         example_count += answers.size(0)
 
     loss = running_loss / example_count
     acc = (running_corrects / len(dataloader.dataset)) * 100
-    print('Validation Loss: {:.4f} Acc: {:2.3f} ({}/{})'.format(loss,
+    print('Validation Loss: {:.4f} Acc: {:2.3f}% ({}/{})'.format(loss,
                                                                 acc, running_corrects, example_count))
     return loss, acc
 
