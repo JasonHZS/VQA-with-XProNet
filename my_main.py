@@ -91,11 +91,37 @@ model = train_model(model,
 # validate(model, data_loaders['val'], full_vocab, device, criterion)
 
 # F-VQA：
+
 # Epoch Validation Time: 1m 44s
 # Training complete in 46m 31s
 # Best val Acc(Hit@1): 4.760512%
 
+# Epoch Validation Time: 1m 41s
+# Training complete in 13m 50s
+# Best val Acc(Hit@3): 6.098720%
+
+# Epoch Validation Time: 1m 42s
+# Training complete in 13m 47s
+# Best val Acc(Hit@5): 9.191956%
+
+# Epoch Validation Time: 1m 43s
+# Training complete in 13m 51s
+# Best val Acc(Hit@10): 10.822669%
+
 # ZS-VQA：
+
 # Epoch Validation Time: 1m 44s
 # Training complete in 13m 50s
 # Best val Acc(Hit@1): 1.043629%
+
+# Epoch Validation Time: 1m 47s
+# Training complete in 14m 4s
+# Best val Acc: 7.819974%
+
+# Epoch Validation Time: 1m 43s
+# Training complete in 13m 39s
+# Best val Acc(Hit@5): 7.189448%
+
+# Epoch Validation Time: 1m 45s
+# Training complete in 13m 51s
+# Best val Acc(Hit@10): 10.675460%

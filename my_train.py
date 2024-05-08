@@ -125,7 +125,7 @@ def train_model(model, data_loaders, vocab, device, criterion, optimizer, schedu
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    print('Best val Acc: {:4f}%'.format(best_acc))
     # load best model weights
     model.load_state_dict(best_model_wts)
 
@@ -166,7 +166,7 @@ def validate(model, dataloader, vocab, device, criterion):
         loss = criterion(ans_scores, answers)
 
         # _, preds = torch.max(ans_scores, 1)
-        _, topk_preds = torch.topk(ans_scores, k=5, dim=1)
+        _, topk_preds = torch.topk(ans_scores, k=3, dim=1)
         correct = topk_preds.eq(answers.view(-1, 1).expand_as(topk_preds))
         running_corrects += correct.sum().item()
 
