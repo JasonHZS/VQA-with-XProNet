@@ -1,6 +1,6 @@
-torch==1.9.0
+torch
 torchvision
 numpy
 Pillow
 argparse
-tensorboardX
+open_clip_torch
