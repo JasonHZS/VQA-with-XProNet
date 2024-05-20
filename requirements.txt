@@ -4,3 +4,4 @@ numpy
 Pillow
 argparse
 open_clip_torch
+transformers
