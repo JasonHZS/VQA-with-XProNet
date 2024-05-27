@@ -120,3 +120,7 @@ config/all
 data/
 data0/
 my_ckp/
+
+# result
+qa-bert-finetuned-squad
+test-squad-trained
