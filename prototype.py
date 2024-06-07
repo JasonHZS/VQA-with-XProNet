@@ -5,41 +5,52 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pickle
-from .utils import my_con_loss
-
 
 def clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
 def memory_querying_responding(query, key, value, mask=None, dropout=None, topk=32):
-    d_k = query.size(-1)
+    # 计算 query 向量的维度
+    d_k = query.size(-1) 
 
+    # 根据 scaled dot-product attention 计算 query 和 key 的相似度得分
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
+    
+    # 如果提供了 mask，使用 mask 更新得分
+    # 在 mask 中为 0 的位置上设置得分为极小值，以在 softmax 后这些位置的权重接近 0
     if mask is not None:
-        scores = scores.masked_fill(mask == 0, torch.finfo(scores.dtype).min)
+       scores = scores.masked_fill(mask == 0, torch.finfo(scores.dtype).min)
+    
+    # 从 scores 中选出 topk 最高的得分和对应的索引
     selected_scores, idx = scores.topk(topk)
-    # query [8, 8, 49/98, 64]) value [8, 8, 2048, 64] score [8, 8, 49/98, 2048]
-    # idx 8x8x98x32
-    dummy_value = value.unsqueeze(2).expand(idx.size(0), idx.size(1), idx.size(2), value.size(-2), value.size(-1)) #[8, 8, 98, 2048, 64]
-    dummy_idx = idx.unsqueeze(-1).expand(idx.size(0), idx.size(1), idx.size(2), idx.size(3), value.size(-1)) # [8, 8, 98, 32, 64]
 
-    selected_value = torch.gather(dummy_value, 3, dummy_idx) # [8, 8, 98, 32, 64]
+    # 扩展 value 张量，使其在第三维度（query维度）上重复，以便对每个查询选择相应的 value
+    dummy_value = value.unsqueeze(2).expand(idx.size(0), idx.size(1), idx.size(2), value.size(-2), value.size(-1))
+    
+    # 扩展索引，使其在最后一个维度（embedding维度）上重复，以便从 dummy_value 中选取特定元素
+    dummy_idx = idx.unsqueeze(-1).expand(idx.size(0), idx.size(1), idx.size(2), idx.size(3), value.size(-1))
 
-    p_attn = F.softmax(selected_scores.float(), dim=-1)  # [8, 8, 98, 32]
+    # 使用扩展后的索引从扩展后的 value 张量中选取元素，这些元素是由 top-k 得分确定的
+    selected_value = torch.gather(dummy_value, 3, dummy_idx)
 
+    # 对选择的得分应用 softmax，计算最终的注意力权重
+    p_attn = F.softmax(selected_scores.float(), dim=-1)
+
+    # 如果提供了 dropout 模块，则在注意力权重上应用 dropout
     if dropout is not None:
-        p_attn = dropout(p_attn)
+       p_attn = dropout(p_attn)
+
+    # 使用注意力权重对选取的 value 进行加权求和，计算最终的输出
     return torch.matmul(p_attn.unsqueeze(3), selected_value).squeeze(3), p_attn
 
 
-def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
-        att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks, _ = \
-            self._prepare_feature_forward(att_feats, att_masks, labels=labels)
-        memory = self.model.encode(att_feats, att_masks)
 
-        return fc_feats[..., :1], att_feats[..., :1], memory, att_masks, labels, query_matrix, cmn_masks
+def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
+       att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks, _ = _prepare_feature_forward(att_feats, att_masks, labels=labels)
+       memory = self.model.encode(att_feats, att_masks)
+
+       return fc_feats[..., :1], att_feats[..., :1], memory, att_masks, labels, query_matrix, cmn_masks
 
 
 def _prepare_feature_forward(self, att_feats, att_masks=None, seq=None, labels=None,):
@@ -49,7 +60,7 @@ def _prepare_feature_forward(self, att_feats, att_masks=None, seq=None, labels=N
         这些矩阵和掩码为跨模态交互提供了必要的基础设施。
         """
         att_feats, att_masks = self.clip_att(att_feats, att_masks)
-        att_feats = pack_wrapper(self.att_embed, att_feats, att_masks)
+       #  att_feats = pack_wrapper(self.att_embed, att_feats, att_masks)
 
         if att_masks is None:
             att_masks = att_feats.new_ones(att_feats.shape[:2], dtype=torch.long)
