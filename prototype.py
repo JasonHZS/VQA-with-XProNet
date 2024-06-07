@@ -13,37 +13,27 @@ def clones(module, N):
 def memory_querying_responding(query, key, value, mask=None, dropout=None, topk=32):
     # 计算 query 向量的维度
     d_k = query.size(-1) 
-
     # 根据 scaled dot-product attention 计算 query 和 key 的相似度得分
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-    
     # 如果提供了 mask，使用 mask 更新得分
     # 在 mask 中为 0 的位置上设置得分为极小值，以在 softmax 后这些位置的权重接近 0
     if mask is not None:
        scores = scores.masked_fill(mask == 0, torch.finfo(scores.dtype).min)
-    
     # 从 scores 中选出 topk 最高的得分和对应的索引
     selected_scores, idx = scores.topk(topk)
-
     # 扩展 value 张量，使其在第三维度（query维度）上重复，以便对每个查询选择相应的 value
     dummy_value = value.unsqueeze(2).expand(idx.size(0), idx.size(1), idx.size(2), value.size(-2), value.size(-1))
-    
     # 扩展索引，使其在最后一个维度（embedding维度）上重复，以便从 dummy_value 中选取特定元素
     dummy_idx = idx.unsqueeze(-1).expand(idx.size(0), idx.size(1), idx.size(2), idx.size(3), value.size(-1))
-
     # 使用扩展后的索引从扩展后的 value 张量中选取元素，这些元素是由 top-k 得分确定的
     selected_value = torch.gather(dummy_value, 3, dummy_idx)
-
     # 对选择的得分应用 softmax，计算最终的注意力权重
     p_attn = F.softmax(selected_scores.float(), dim=-1)
-
     # 如果提供了 dropout 模块，则在注意力权重上应用 dropout
     if dropout is not None:
        p_attn = dropout(p_attn)
-
     # 使用注意力权重对选取的 value 进行加权求和，计算最终的输出
     return torch.matmul(p_attn.unsqueeze(3), selected_value).squeeze(3), p_attn
-
 
 
 def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
@@ -53,41 +43,45 @@ def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
        return fc_feats[..., :1], att_feats[..., :1], memory, att_masks, labels, query_matrix, cmn_masks
 
 
-def _prepare_feature_forward(self, att_feats, att_masks=None, seq=None, labels=None,):
+def _prepare_feature_forward(self, att_feats, att_masks=None, seq=None,):
         """
         query_matrix 和 cmn_masks 的生成与管理涉及了跨模态原型矩阵的动态使用。
         该方法根据输入标签构建查询矩阵 query_matrix，并生成与之对应的掩码 cmn_masks，
         这些矩阵和掩码为跨模态交互提供了必要的基础设施。
+        
+        参数:
+        att_feats (Tensor): 输入特征张量。(全部拼接后的向量)
+        att_masks (Tensor, 可选): 对应于输入特征的掩码。
+        seq (Tensor, 可选): 输入序列，通常用于序列处理任务。
+
+        返回:
+        Tuple: 包括处理后的特征、序列、特征掩码、序列掩码、查询矩阵、共同掩码和响应。
         """
-        att_feats, att_masks = self.clip_att(att_feats, att_masks)
-       #  att_feats = pack_wrapper(self.att_embed, att_feats, att_masks)
 
-        if att_masks is None:
-            att_masks = att_feats.new_ones(att_feats.shape[:2], dtype=torch.long)
+        # 如果没有提供掩码，则创建一个全1的掩码
+        # if att_masks is None:
+        #     att_masks = att_feats.new_ones(att_feats.shape[:2], dtype=torch.long)
 
-        per_num_protype = labels.sum(-1) * self.num_protype
-        max_num_protype = max(per_num_protype)
-        protypes = self.dim_reduction(self.protypes).view(self.num_cluster, self.num_protype, -1)
-        query_matrix = protypes.new_zeros(att_feats.size(0), max_num_protype.int(), protypes.shape[-1])
-        cmn_masks = protypes.new_zeros(query_matrix.shape[0], att_feats.size(1), max_num_protype.int())
+        # 初始化一个默认查询矩阵和掩码
+        query_matrix = att_feats.new_zeros(att_feats.size(0), att_feats.size(1), att_feats.size(2))
+        cmn_masks = att_feats.new_ones(query_matrix.shape[0], query_matrix.shape[1])
 
-        labels_mask = labels == 1
-        for i in range(att_feats.size(0)):
-            query_matrix[i, :per_num_protype[i].long()] = protypes[labels_mask[i]].view(-1, protypes.shape[-1])
-            cmn_masks[i, :, :per_num_protype[i].long()] = 1
-
+        # 使用查询矩阵和掩码进行跨模态交互，并获取响应
         responses = self.cmn(att_feats, query_matrix, query_matrix, cmn_masks)
 
-        # feature interaction
+        # 特征融合
         att_feats = self.fuse_feature(torch.cat((att_feats, responses), dim=2))
 
-
-        att_masks = att_masks.unsqueeze(-2)
+        # 序列和序列掩码处理，如果提供了序列
         if seq is not None:
+            # 去除序列的最后一个元素
             seq = seq[:, :-1]
+            # 生成序列掩码，忽略0值
             seq_mask = (seq.data > 0)
+            # 确保序列的第一个元素始终可见
             seq_mask[:, 0] += True
 
+            # 扩展并应用后续掩码，用于序列中未来位置的遮蔽
             seq_mask = seq_mask.unsqueeze(-2)
             seq_mask = seq_mask & subsequent_mask(seq.size(-1)).to(seq_mask)
         else:
