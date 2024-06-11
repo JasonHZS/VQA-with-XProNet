@@ -55,7 +55,7 @@ class MultiThreadMemory(nn.Module):
         允许模型在文本和视觉特征间进行交互和信息融合。
         """
 
-        print(f"query: {query.shape}, key: {key.shape}, value: {value.shape}")
+        # print(f"query: {query.shape}, key: {key.shape}, value: {value.shape}")
         if mask is not None:
             mask = mask.unsqueeze(1)
         nbatches = query.size(0)
