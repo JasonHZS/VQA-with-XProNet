@@ -54,6 +54,8 @@ class MultiThreadMemory(nn.Module):
         这符合跨模态原型矩阵（Shared Cross-modal Prototype Matrix）的概念，
         允许模型在文本和视觉特征间进行交互和信息融合。
         """
+
+        print(f"query: {query.shape}, key: {key.shape}, value: {value.shape}")
         if mask is not None:
             mask = mask.unsqueeze(1)
         nbatches = query.size(0)
