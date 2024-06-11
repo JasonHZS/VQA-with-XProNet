@@ -36,64 +36,10 @@ def memory_querying_responding(query, key, value, mask=None, dropout=None, topk=
     return torch.matmul(p_attn.unsqueeze(3), selected_value).squeeze(3), p_attn
 
 
-def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
-       att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks, _ = _prepare_feature_forward(att_feats, att_masks, labels=labels)
-       memory = self.model.encode(att_feats, att_masks)
-
-       return fc_feats[..., :1], att_feats[..., :1], memory, att_masks, labels, query_matrix, cmn_masks
-
-
-def _prepare_feature_forward(self, att_feats, att_masks=None, seq=None,):
-        """
-        query_matrix 和 cmn_masks 的生成与管理涉及了跨模态原型矩阵的动态使用。
-        该方法根据输入标签构建查询矩阵 query_matrix，并生成与之对应的掩码 cmn_masks，
-        这些矩阵和掩码为跨模态交互提供了必要的基础设施。
-        
-        参数:
-        att_feats (Tensor): 输入特征张量。(全部拼接后的向量)
-        att_masks (Tensor, 可选): 对应于输入特征的掩码。
-        seq (Tensor, 可选): 输入序列，通常用于序列处理任务。
-
-        返回:
-        Tuple: 包括处理后的特征、序列、特征掩码、序列掩码、查询矩阵、共同掩码和响应。
-        """
-
-        # 如果没有提供掩码，则创建一个全1的掩码
-        # if att_masks is None:
-        #     att_masks = att_feats.new_ones(att_feats.shape[:2], dtype=torch.long)
-
-        # 初始化一个默认查询矩阵和掩码
-        query_matrix = att_feats.new_zeros(att_feats.size(0), att_feats.size(1), att_feats.size(2))
-        cmn_masks = att_feats.new_ones(query_matrix.shape[0], query_matrix.shape[1])
-
-        # 使用查询矩阵和掩码进行跨模态交互，并获取响应
-        responses = self.cmn(att_feats, query_matrix, query_matrix, cmn_masks)
-
-        # 特征融合
-        att_feats = self.fuse_feature(torch.cat((att_feats, responses), dim=2))
-
-        # 序列和序列掩码处理，如果提供了序列
-        if seq is not None:
-            # 去除序列的最后一个元素
-            seq = seq[:, :-1]
-            # 生成序列掩码，忽略0值
-            seq_mask = (seq.data > 0)
-            # 确保序列的第一个元素始终可见
-            seq_mask[:, 0] += True
-
-            # 扩展并应用后续掩码，用于序列中未来位置的遮蔽
-            seq_mask = seq_mask.unsqueeze(-2)
-            seq_mask = seq_mask & subsequent_mask(seq.size(-1)).to(seq_mask)
-        else:
-            seq_mask = None
-
-        return att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks[:,0,:], responses
-
-
 class MultiThreadMemory(nn.Module):
     def __init__(self, h, d_model, dropout=0.1, topk=32):
         super(MultiThreadMemory, self).__init__()
-        assert d_model % h == 0
+        assert d_model % h == 0 # 输入和输出张量的维度d_model必须能被头数head整除
         self.d_k = d_model // h
         self.h = h
         self.linears = clones(nn.Linear(d_model, d_model), 4)
@@ -138,3 +84,50 @@ class MultiThreadMemory(nn.Module):
             return self.linears[-1](x), present
         else:
             return self.linears[-1](x)
+        
+
+def _prepare_feature(self, fc_feats, att_feats, att_masks, labels = None):
+       att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks, _ = _prepare_feature_forward(att_feats, att_masks, labels=labels)
+       memory = self.model.encode(att_feats, att_masks)
+
+       return fc_feats[..., :1], att_feats[..., :1], memory, att_masks, labels, query_matrix, cmn_masks
+
+
+def _prepare_feature_forward(att_feats, att_masks=None, seq=None,):
+        """
+        query_matrix 和 cmn_masks 的生成与管理涉及了跨模态原型矩阵的动态使用。
+        该方法根据输入标签构建查询矩阵 query_matrix，并生成与之对应的掩码 cmn_masks，
+        这些矩阵和掩码为跨模态交互提供了必要的基础设施。
+        
+        参数:
+        att_feats (Tensor): 输入特征张量。(全部拼接后的向量)
+        att_masks (Tensor, 可选): 对应于输入特征的掩码。
+        seq (Tensor, 可选): 输入序列，通常用于序列处理任务。
+
+        返回:
+        Tuple: 包括处理后的特征、序列、特征掩码、序列掩码、查询矩阵、共同掩码和响应。
+        """
+        
+        # protypes = nn.Parameter(torch.FloatTensor(num_protype * num_cluster, d_txt_ebd + d_img_ebd))
+        init_protypes = torch.load(init_protypes_path).float()
+        protypes = nn.Parameter(init_protypes)
+        
+        dim_reduction = nn.Linear(d_txt_ebd + d_img_ebd, cmm_dim)
+        cmn = MultiThreadMemory(num_heads=16, d_model=2048, topk=5)
+        fuse_feature = nn.Linear(d_model*2, d_model)
+        
+        protypes = dim_reduction(protypes).view(num_cluster, num_protype, -1)
+        
+        # 初始化一个默认查询矩阵和掩码
+        # 保证函数即使在没有标签输入的情况下也能运行
+        query_matrix = att_feats.new_zeros(att_feats.size(0), att_feats.size(1), att_feats.size(2))
+
+        # 使用查询矩阵和掩码进行跨模态交互，并获取响应
+        responses = cmn(att_feats, query_matrix, query_matrix)
+
+        # 特征融合
+        att_feats = fuse_feature(torch.cat((att_feats, responses), dim=2))
+
+        return att_feats, query_matrix, responses
+
+
