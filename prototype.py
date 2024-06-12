@@ -37,17 +37,18 @@ def memory_querying_responding(query, key, value, mask=None, dropout=None, topk=
 
 
 class MultiThreadMemory(nn.Module):
-    def __init__(self, h, d_model, dropout=0.1, topk=32):
+    def __init__(self, h, d_model, dropout=0.1, topk=32, device='cuda'):
         super(MultiThreadMemory, self).__init__()
         assert d_model % h == 0 # 输入和输出张量的维度d_model必须能被头数head整除
         self.d_k = d_model // h
         self.h = h
-        self.linears = clones(nn.Linear(d_model, d_model), 4)
+        self.device = device
+        self.linears = clones(nn.Linear(d_model, d_model), 4).to(self.device)
         self.attn = None
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout).to(self.device)
         self.topk = topk
 
-    def forward(self, query, key, value, mask=None, layer_past=None):
+    def forward(self, query, key, value, device, mask=None, layer_past=None):
         """
         这个方法处理跨模态信息的查询和响应，它使用了一个多头注意力机制来处理query, key, 和 value。
         它通过调用 memory_querying_responding 函数实现了跨模态原型的选择和相应的交互，
@@ -55,7 +56,10 @@ class MultiThreadMemory(nn.Module):
         允许模型在文本和视觉特征间进行交互和信息融合。
         """
 
-        # print(f"query: {query.shape}, key: {key.shape}, value: {value.shape}")
+        query = query.to(device)
+        key = key.to(device)
+        value = value.to(device)
+        
         if mask is not None:
             mask = mask.unsqueeze(1)
         nbatches = query.size(0)
