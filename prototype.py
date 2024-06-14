@@ -6,6 +6,37 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class VqaPrototypeModel(nn.Module):
+    def __init__(self, prototype_vectors, qamodel, device, image_features, batch_size=16, seq_length=38):
+        super(VqaPrototypeModel, self).__init__()
+        self.device = device
+        self.qamodel = qamodel.to(self.device)
+        self.prototype = MultiThreadMemory(h=4, d_model=qamodel.qa_outputs.in_features+image_features.shape[-1]*2, 
+                                           topk=3, dropout=0.1, device=self.device).to(self.device)
+        self.prototype_vectors = prototype_vectors.repeat(batch_size, seq_length, 1).to(self.device)
+        # print(f"prototype_vectors shape: {prototype_vectors.shape}")
+        self.fc = nn.Linear((qamodel.qa_outputs.in_features+image_features.shape[-1]*2)*2, 
+                            qamodel.qa_outputs.in_features).to(self.device) 
+
+    def forward(self, combined_features, start_positions, end_positions):
+        combined_features = torch.tensor(combined_features).to(self.device)
+        # print(f"combined_features shape: {combined_features.shape}")
+
+        response = self.prototype(combined_features, self.prototype_vectors, self.prototype_vectors, device=self.device)
+        # print("Shape of Response:", response.shape)
+        
+        # 拼接原型响应和 BERT 输出
+        final_combined_features = torch.cat([combined_features, response], dim=2)
+        # print("Shape of final_combined_features:", final_combined_features.shape)
+        
+        reduced_features = self.fc(final_combined_features)
+        # print("Shape of reduced_features:", reduced_features.shape)
+        
+        outputs = self.qamodel(inputs_embeds=reduced_features, start_positions=start_positions, end_positions=end_positions)
+        
+        return outputs.loss, outputs.start_logits, outputs.end_logits
+    
+    
 def clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 

@@ -254,15 +254,15 @@ if __name__ == '__main__':
     logger.info('开始加载训练数据集')
     train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
     
-    # indices = np.random.permutation(len(train_dataset))[:100]
-    # # 使用选定的索引切割数据集
-    # small_train_dataset = train_dataset.select(indices)
+    indices = np.random.permutation(len(train_dataset))[:6000]
+    # 使用选定的索引切割数据集
+    small_train_dataset = train_dataset.select(indices)
 
     logger.info(f"sample: {train_dataset[0]}")
     logger.info(f'训练集大小：{len(train_dataset)}')
   
     logger.info('开始使用CLIP提取图像与文本特征')
-    train_combine_dataset = train_dataset.map(process_combine_data, batched=True, batch_size=32)
+    train_combine_dataset = small_train_dataset.map(process_combine_data, batched=True, batch_size=32)
     logger.info('图像与文本特征提取完成')
     logger.info(f"数据集 info: {train_combine_dataset}")
     
@@ -279,15 +279,16 @@ if __name__ == '__main__':
     del train_dataset, train_combine_dataset, tokenized_train_combine_dataset
 
     # --------------------------------- val dataset ---------------------------------
+    
     logger.info('开始加载测试数据集')
     validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
     logger.info(f'测试集大小：{len(validation_dataset)}')
     
-    # indices = np.random.permutation(len(validation_dataset))[:20]
-    # small_val_dataset = validation_dataset.select(indices)
+    indices = np.random.permutation(len(validation_dataset))[:2000]
+    small_val_dataset = validation_dataset.select(indices)
 
     logger.info('开始使用CLIP提取图像与文本特征')
-    val_combine_dataset = validation_dataset.map(process_combine_data, batched=True, batch_size=32)
+    val_combine_dataset = small_val_dataset.map(process_combine_data, batched=True, batch_size=32)
     logger.info('图像与文本特征提取完成')
     logger.info(f"测试数据集 info: {val_combine_dataset}")
     
