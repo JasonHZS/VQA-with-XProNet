@@ -11,23 +11,23 @@ from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 
 class VQADataset:
     def __init__(self, key, questions, contexts, answers, img_names):
-        questions = questions
-        contexts = contexts
-        answers = answers
-        img_names = img_names
-        key = key
+        self.questions = questions
+        self.contexts = contexts
+        self.answers = answers
+        self.img_names = img_names
+        self.key = key
 
     def __getitem__(self, idx):
         return {
-            'key': key[idx],
-            'question': questions[idx],
-            'context': contexts[idx],
-            'answers': answers[idx],
-            'image_name': img_names[idx]
+            'key': self.key[idx],
+            'question': self.questions[idx],
+            'context': self.contexts[idx],
+            'answers': self.answers[idx],
+            'image_name': self.img_names[idx]
         }
 
     def __len__(self):
-        return len(questions)
+        return len(self.questions)
  
 def load_datasets(data_dir, sub_folders, img_dir):
     questions = []
