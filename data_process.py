@@ -283,6 +283,8 @@ if __name__ == '__main__':
     logger.info('开始加载测试数据集')
     validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
     logger.info(f'测试集大小：{len(validation_dataset)}')
+    # 保存
+    # validation_dataset.save_to_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/origin_val')
     
     indices = np.random.permutation(len(validation_dataset))[:2000]
     small_val_dataset = validation_dataset.select(indices)

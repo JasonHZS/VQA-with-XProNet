@@ -11,11 +11,11 @@ class VqaPrototypeModel(nn.Module):
         super(VqaPrototypeModel, self).__init__()
         self.device = device
         self.qamodel = qamodel.to(self.device)
-        self.prototype = MultiThreadMemory(h=4, d_model=qamodel.qa_outputs.in_features+image_features.shape[-1]*2, 
+        self.prototype = MultiThreadMemory(h=4, d_model=qamodel.qa_outputs.in_features+image_features*2, 
                                            topk=3, dropout=0.1, device=self.device).to(self.device)
         self.prototype_vectors = prototype_vectors.repeat(batch_size, seq_length, 1).to(self.device)
         # print(f"prototype_vectors shape: {prototype_vectors.shape}")
-        self.fc = nn.Linear((qamodel.qa_outputs.in_features+image_features.shape[-1]*2)*2, 
+        self.fc = nn.Linear((qamodel.qa_outputs.in_features+image_features*2)*2, 
                             qamodel.qa_outputs.in_features).to(self.device) 
 
     def forward(self, combined_features, start_positions, end_positions):
