@@ -15,18 +15,31 @@ def eval(tokenizer, trained_model, validation_dataset):
        predictions = []
        references = []
 
-       for combined_features in validation_dataset['combined_features']:
+       for i in range(len(validation_dataset)):
+              sample = validation_dataset[i]
+              combined_features = sample['combined_features']
+              question = sample['question']
+              context = sample['context']
+              answers = sample['answers']
+              attention_mask = sample['attention_mask']
+              start_positions = sample['start_positions']
+              end_positions = sample['end_positions']
               # 预测答案
-              # inputs = tokenizer(question, context, return_tensors="pt")
+              inputs = tokenizer(question, context, return_tensors="pt")
               with torch.no_grad():
-                     outputs = trained_model(combined_features)
+                     outputs = trained_model(combined_features=combined_features,
+                                             attention_mask=attention_mask,
+                                             start_positions=start_positions, 
+                                             end_positions=end_positions)
                      
               answer_start_index = outputs.start_logits.argmax()
               answer_end_index = outputs.end_logits.argmax() 
-              predict_answer = tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(input_ids[answer_start_index:answer_end_index + 1]))
-
-              predictions.append()
-              references.append()
+              
+              predict_answer_tokens = inputs.input_ids[0, answer_start_index : answer_end_index + 1]
+              predict_answer = tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
+              
+              predictions.append(predict_answer)
+              references.append(answers)
 
        # 计算 hit@5 和 hit@10
        hit1 = hit_at_k(predictions, references, 1)

@@ -64,21 +64,21 @@ def load_datasets(data_dir, sub_folders, img_dir):
     
     return dataset
 
-def get_train_val_dataset():
-       project_root = os.getcwd()
-       train_data_dir = os.path.join(project_root, 'data/KG_VQA/fvqa/exp_data/train_seen_data')
-       test_data_dir = os.path.join(project_root, 'data/KG_VQA/fvqa/exp_data/test_unseen_data')
-       img_dir = os.path.join(project_root, "data/KG_VQA/fvqa/exp_data/images/images")
-       sub_folders_train = ['train0', 'train1', 'train2', 'train3', 'train4']
-       sub_folders_test = ['test0', 'test1', 'test2', 'test3', 'test4']
+# def get_train_val_dataset():
+#        project_root = os.getcwd()
+#        train_data_dir = os.path.join(project_root, 'data/KG_VQA/fvqa/exp_data/train_seen_data')
+#        test_data_dir = os.path.join(project_root, 'data/KG_VQA/fvqa/exp_data/test_unseen_data')
+#        img_dir = os.path.join(project_root, "data/KG_VQA/fvqa/exp_data/images/images")
+#        sub_folders_train = ['train0', 'train1', 'train2', 'train3', 'train4']
+#        sub_folders_test = ['test0', 'test1', 'test2', 'test3', 'test4']
 
-       train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
-       validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
+#        train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
+#        validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
 
-       print(train_dataset[0])
-       print('训练集大小：', len(train_dataset))
-       print('验证集大小：', len(validation_dataset))
-       return train_dataset, validation_dataset
+#        print(train_dataset[0])
+#        print('训练集大小：', len(train_dataset))
+#        print('验证集大小：', len(validation_dataset))
+#        return train_dataset, validation_dataset
 
 def prepare_train_features(examples):
     # Some of the questions have lots of whitespace on the left, which is not useful and will make the
@@ -196,15 +196,11 @@ def process_combine_data(batch):
 
     # 准备输入数据
     # input_ids = tokenizer.encode(batch['question'], batch['context'], add_special_tokens=False, return_tensors="pt")
-
-    # 处理一批问题和上下文数据
-    # input_ids = [tokenizer.encode(q, c, add_special_tokens=True, return_tensors="pt") for q, c in zip(batch['question'], batch['context'])]
-    # input_ids = [tokenizer.encode(q, c, add_special_tokens=True, return_tensors="pt", max_length=max_length, padding='max_length', truncation=True) for q, c in zip(batch['question'], batch['context'])]
-    # input_ids = torch.cat(input_ids, dim=0).to(device)  # 合并批次数据
     input_ids = []
     for q, c in zip(batch['question'], batch['context']):
         input_id = tokenizer.encode(q, c, add_special_tokens=True, return_tensors="pt", max_length=max_length, padding='max_length', truncation=True)
         input_ids.append(input_id)
+        
     input_ids = torch.cat(input_ids, dim=0).to(device, non_blocking=True)  # 合并批次数据
 
     with torch.no_grad():
@@ -243,7 +239,6 @@ def process_data_and_save(mydataset, delect_cols, save_dir):
     
     logger.info('开始预处理数据集')
     tokenized_combine_dataset = combine_dataset.map(prepare_train_features, batched=True, remove_columns=delect_cols)    
-    tokenized_combine_dataset = tokenized_combine_dataset.map(remove_columns, batched=True)
     
     logger.info('数据集预处理完成')
     logger.info(f"训练数据集 info: {tokenized_combine_dataset}")
@@ -278,7 +273,7 @@ if __name__ == '__main__':
     # small_train_dataset = train_dataset.select(indices)
     # delect_cols = train_dataset.column_names
     # save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/train'
-    # process_data_and_save(small_train_dataset, delect_cols)
+    # process_data_and_save(small_train_dataset, delect_cols, save_dir)
 
     # --------------------------------- val dataset ---------------------------------
     
@@ -288,7 +283,7 @@ if __name__ == '__main__':
     indices = np.random.permutation(len(validation_dataset))[:2000]
     # 使用选定的索引切割数据集
     small_val_dataset = validation_dataset.select(indices)
-    delect_cols = ['key', 'question', 'context', 'image_name']
+    delect_cols = ['key']
     save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val'
     process_data_and_save(small_val_dataset, delect_cols, save_dir)
 

@@ -53,15 +53,15 @@ if __name__ == '__main__':
        tokenized_combine_train_dataset = load_from_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/train')
        tokenized_combine_val_dataset = load_from_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val')
        prototype_vectors = torch.load('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/init_prototype/prototype_vectors.pt')
+       # logger.info(tokenized_combine_train_dataset.column_names)
        
-       # 设置要选择的样本数量
-       num_samples = 100
-       # 创建一个索引列表，包含要选择的样本索引
-       indices = list(range(num_samples))
-       # 创建数据集的子集
-       subset_train_dataset = Subset(tokenized_combine_train_dataset, indices)
-       subset_val_dataset = Subset(tokenized_combine_val_dataset, indices)
+       
+       indices = np.random.permutation(len(tokenized_combine_val_dataset))[:20]
+       small_val_dataset = tokenized_combine_val_dataset.select(indices)
+       indices = np.random.permutation(len(tokenized_combine_train_dataset))[:200]
+       small_train_dataset = tokenized_combine_train_dataset.select(indices)
 
+       
        # 设置训练参数
        model_name = "vqa-bert"
        batch_size = 10
@@ -86,8 +86,8 @@ if __name__ == '__main__':
        trainer = Trainer(
               model=vqa_model,
               args=args,
-              train_dataset=subset_train_dataset,
-              eval_dataset=subset_val_dataset,
+              train_dataset=small_train_dataset,
+              eval_dataset=small_val_dataset,
               data_collator=default_data_collator,  
               tokenizer=tokenizer
               )
@@ -99,6 +99,7 @@ if __name__ == '__main__':
        logger.info("Evaluation...")
        # TODO:修改评估函数，接受tokenized_combine_val_dataset输入
        eval(tokenizer, vqa_model, small_val_dataset)
+       
        # trainer.save_model("test-squad-trained")
        # logger.info("Model saved!")
        

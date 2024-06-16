@@ -18,7 +18,7 @@ class VqaPrototypeModel(nn.Module):
         self.fc = nn.Linear((qamodel.qa_outputs.in_features+image_features*2)*2, 
                             qamodel.qa_outputs.in_features).to(self.device) 
 
-    def forward(self, combined_features, start_positions, end_positions):
+    def forward(self, combined_features, attention_mask, start_positions, end_positions):
         combined_features = torch.tensor(combined_features).to(self.device)
         # print(f"combined_features shape: {combined_features.shape}")
 
@@ -32,7 +32,10 @@ class VqaPrototypeModel(nn.Module):
         reduced_features = self.fc(final_combined_features)
         # print("Shape of reduced_features:", reduced_features.shape)
         
-        outputs = self.qamodel(inputs_embeds=reduced_features, start_positions=start_positions, end_positions=end_positions)
+        outputs = self.qamodel(inputs_embeds=reduced_features, 
+                               attention_mask=attention_mask,
+                               start_positions=start_positions, 
+                               end_positions=end_positions)
         
         return outputs.loss, outputs.start_logits, outputs.end_logits
     
