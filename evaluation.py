@@ -15,19 +15,18 @@ def eval(tokenizer, trained_model, validation_dataset):
        predictions = []
        references = []
 
-       for key, question, context, answers in zip(validation_dataset['key'], validation_dataset['question'], validation_dataset['context'], validation_dataset['answers']):
+       for combined_features in validation_dataset['combined_features']:
               # 预测答案
-              inputs = tokenizer(question, context, return_tensors="pt")
+              # inputs = tokenizer(question, context, return_tensors="pt")
               with torch.no_grad():
-                     outputs = trained_model(**inputs)
+                     outputs = trained_model(combined_features)
                      
               answer_start_index = outputs.start_logits.argmax()
-              answer_end_index = outputs.end_logits.argmax()
-              
-              predict_answer_tokens = inputs.input_ids[0, answer_start_index : answer_end_index + 1]
-              predict_answer = tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-              predictions.append(predict_answer.split())
-              references.append(answers['text'][0])
+              answer_end_index = outputs.end_logits.argmax() 
+              predict_answer = tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(input_ids[answer_start_index:answer_end_index + 1]))
+
+              predictions.append()
+              references.append()
 
        # 计算 hit@5 和 hit@10
        hit1 = hit_at_k(predictions, references, 1)

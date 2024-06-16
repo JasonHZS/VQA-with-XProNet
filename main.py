@@ -12,7 +12,6 @@ from transformers import default_data_collator
 from torch.utils.data.dataloader import default_collate
 from transformers import AutoModelForQuestionAnswering, AutoTokenizer, TrainingArguments, Trainer
 from evaluation import eval
-from data_process import load_datasets
 
 # 判断并选择设备
 def select_device():

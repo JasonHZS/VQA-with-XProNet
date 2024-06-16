@@ -231,6 +231,26 @@ def remove_columns(example):
     example.pop("attention_mask", None)
     return example
 
+def process_data_and_save(mydataset, delect_cols, save_dir):
+    
+    logger.info(f"sample: {mydataset[0]}")
+    logger.info(f'训练集大小：{len(mydataset)}')
+
+    logger.info('开始使用CLIP提取图像与文本特征')
+    combine_dataset = mydataset.map(process_combine_data, batched=True, batch_size=32)
+    logger.info('图像与文本特征提取完成')
+    logger.info(f"数据集 info: {combine_dataset}")
+    
+    logger.info('开始预处理数据集')
+    tokenized_combine_dataset = combine_dataset.map(prepare_train_features, batched=True, remove_columns=delect_cols)    
+    tokenized_combine_dataset = tokenized_combine_dataset.map(remove_columns, batched=True)
+    
+    logger.info('数据集预处理完成')
+    logger.info(f"训练数据集 info: {tokenized_combine_dataset}")
+    
+    tokenized_combine_dataset.save_to_disk(save_dir)
+    logger.info('数据集保存完毕')
+   
    
 if __name__ == '__main__':
     device = select_device()
@@ -250,57 +270,25 @@ if __name__ == '__main__':
     sub_folders_test = ['test0', 'test1', 'test2', 'test3', 'test4']
 
     # --------------------------------- train dataset ---------------------------------
-
-    logger.info('开始加载训练数据集')
-    train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
-    
-    indices = np.random.permutation(len(train_dataset))[:6000]
-    # 使用选定的索引切割数据集
-    small_train_dataset = train_dataset.select(indices)
-
-    logger.info(f"sample: {train_dataset[0]}")
-    logger.info(f'训练集大小：{len(train_dataset)}')
-  
-    logger.info('开始使用CLIP提取图像与文本特征')
-    train_combine_dataset = small_train_dataset.map(process_combine_data, batched=True, batch_size=32)
-    logger.info('图像与文本特征提取完成')
-    logger.info(f"数据集 info: {train_combine_dataset}")
-    
-    logger.info('开始预处理训练数据集')
-    tokenized_train_combine_dataset = train_combine_dataset.map(prepare_train_features, batched=True, remove_columns=train_dataset.column_names)    
-    tokenized_train_combine_dataset = tokenized_train_combine_dataset.map(remove_columns, batched=True)
-    
-    logger.info('训练数据集预处理完成')
-    logger.info(f"训练数据集 info: {tokenized_train_combine_dataset}")
-    
-    tokenized_train_combine_dataset.save_to_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/train')
-    logger.info('训练数据集保存完毕')
-    
-    del train_dataset, train_combine_dataset, tokenized_train_combine_dataset
+        
+    # logger.info('开始加载训练数据集')
+    # train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
+    # indices = np.random.permutation(len(train_dataset))[:6000]
+    # # 使用选定的索引切割数据集
+    # small_train_dataset = train_dataset.select(indices)
+    # delect_cols = train_dataset.column_names
+    # save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/train'
+    # process_data_and_save(small_train_dataset, delect_cols)
 
     # --------------------------------- val dataset ---------------------------------
     
     logger.info('开始加载测试数据集')
     validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
-    logger.info(f'测试集大小：{len(validation_dataset)}')
-    # 保存
     # validation_dataset.save_to_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/origin_val')
-    
     indices = np.random.permutation(len(validation_dataset))[:2000]
+    # 使用选定的索引切割数据集
     small_val_dataset = validation_dataset.select(indices)
-
-    logger.info('开始使用CLIP提取图像与文本特征')
-    val_combine_dataset = small_val_dataset.map(process_combine_data, batched=True, batch_size=32)
-    logger.info('图像与文本特征提取完成')
-    logger.info(f"测试数据集 info: {val_combine_dataset}")
-    
-    logger.info('开始预处理测试数据集')
-    tokenized_val_combine_dataset = val_combine_dataset.map(prepare_train_features, batched=True, remove_columns=validation_dataset.column_names)
-    tokenized_val_combine_dataset = tokenized_val_combine_dataset.map(remove_columns, batched=True)
-    
-    logger.info('测试数据集预处理完成')
-    logger.info(f"测试数据集 info: {tokenized_val_combine_dataset}")
-    
-    tokenized_val_combine_dataset.save_to_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val')
-    logger.info('测试数据集保存完毕')
+    delect_cols = ['key', 'question', 'context', 'image_name']
+    save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val'
+    process_data_and_save(small_val_dataset, delect_cols, save_dir)
 
