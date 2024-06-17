@@ -35,12 +35,16 @@ def eval(tokenizer, trained_model, validation_dataset, device):
               end_logits = outputs[2]
               answer_start_index = start_logits.argmax(dim=1)
               answer_end_index = end_logits.argmax(dim=1) 
-              logger.info(f"answer_start_index: {answer_start_index}")
-              logger.info(f"answer_end_index: {answer_end_index}")
+              # logger.info(f"answer_start_index: {answer_start_index}")
+              # logger.info(f"answer_end_index: {answer_end_index}")
               
+              if answer_end_index < answer_start_index:
+                     answer_end_index = answer_start_index
               predict_answer_tokens = inputs.input_ids[0, answer_start_index : answer_end_index + 1]
               predict_answer = tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-              
+              # predict_answer = tokenizer.convert_tokens_to_string(predict_answer_tokens[answer_start_index:answer_end_index])
+              # predict_answer = tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(predict_answer_tokens))
+
               predictions.append(predict_answer)
               references.append(' '.join(answers['text']))
 

@@ -125,3 +125,4 @@ saved_data
 # result
 qa-bert-finetuned-squad
 test-squad-trained
+distilbert-trained
