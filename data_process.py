@@ -220,7 +220,7 @@ def process_combine_data(batch):
     # 释放中间张量占用的内存
     del last_hidden_states, image_features_expanded, text_features_expanded
 
-    return {"combined_features": combined_features}
+    return {"combined_features": torch.tensor(combined_features)}
 
 def remove_columns(example):
     example.pop("input_ids", None)
@@ -241,7 +241,7 @@ def process_data_and_save(mydataset, delect_cols, save_dir):
     tokenized_combine_dataset = combine_dataset.map(prepare_train_features, batched=True, remove_columns=delect_cols)    
     
     logger.info('数据集预处理完成')
-    logger.info(f"训练数据集 info: {tokenized_combine_dataset}")
+    logger.info(f"数据集 info: {tokenized_combine_dataset}")
     
     tokenized_combine_dataset.save_to_disk(save_dir)
     logger.info('数据集保存完毕')
@@ -283,7 +283,7 @@ if __name__ == '__main__':
     indices = np.random.permutation(len(validation_dataset))[:2000]
     # 使用选定的索引切割数据集
     small_val_dataset = validation_dataset.select(indices)
-    delect_cols = ['key']
+    delect_cols = ['key', 'image_name']
     save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val'
     process_data_and_save(small_val_dataset, delect_cols, save_dir)
 

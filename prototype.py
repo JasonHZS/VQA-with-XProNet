@@ -18,8 +18,8 @@ class VqaPrototypeModel(nn.Module):
         self.fc = nn.Linear((qamodel.qa_outputs.in_features+image_features*2)*2, 
                             qamodel.qa_outputs.in_features).to(self.device) 
 
-    def forward(self, combined_features, attention_mask, start_positions, end_positions):
-        combined_features = torch.tensor(combined_features).to(self.device)
+    def forward(self, combined_features, attention_mask, start_positions=None, end_positions=None):
+        combined_features = combined_features.to(self.device)
         # print(f"combined_features shape: {combined_features.shape}")
 
         response = self.prototype(combined_features, self.prototype_vectors, self.prototype_vectors, device=self.device)

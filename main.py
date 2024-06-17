@@ -60,6 +60,7 @@ if __name__ == '__main__':
        small_val_dataset = tokenized_combine_val_dataset.select(indices)
        indices = np.random.permutation(len(tokenized_combine_train_dataset))[:200]
        small_train_dataset = tokenized_combine_train_dataset.select(indices)
+       logger.info(f'small_val_dataset info: {small_val_dataset}')
 
        
        # 设置训练参数
@@ -98,7 +99,8 @@ if __name__ == '__main__':
 
        logger.info("Evaluation...")
        # TODO:修改评估函数，接受tokenized_combine_val_dataset输入
-       eval(tokenizer, vqa_model, small_val_dataset)
+       # eval(tokenizer, vqa_model.to(device) , small_val_dataset)
+       eval(tokenizer, vqa_model, small_val_dataset, device, batch_size=16)
        
        # trainer.save_model("test-squad-trained")
        # logger.info("Model saved!")
