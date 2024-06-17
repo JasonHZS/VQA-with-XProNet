@@ -52,13 +52,11 @@ if __name__ == '__main__':
        logger.info("Loading datasets...")
        tokenized_combine_train_dataset = load_from_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/train')
        tokenized_combine_val_dataset = load_from_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val')
-       prototype_vectors = torch.load('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/init_prototype/prototype_vectors.pt')
-       # logger.info(tokenized_combine_train_dataset.column_names)
-       
+       prototype_vectors = torch.load('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/init_prototype/prototype_vectors.pt')       
        
        indices = np.random.permutation(len(tokenized_combine_val_dataset))[:20]
        small_val_dataset = tokenized_combine_val_dataset.select(indices)
-       indices = np.random.permutation(len(tokenized_combine_train_dataset))[:200]
+       indices = np.random.permutation(len(tokenized_combine_train_dataset))[:100]
        small_train_dataset = tokenized_combine_train_dataset.select(indices)
        logger.info(f'small_val_dataset info: {small_val_dataset}')
 
@@ -99,8 +97,8 @@ if __name__ == '__main__':
 
        logger.info("Evaluation...")
        # TODO:修改评估函数，接受tokenized_combine_val_dataset输入
-       # eval(tokenizer, vqa_model.to(device) , small_val_dataset)
-       eval(tokenizer, vqa_model, small_val_dataset, device, batch_size=16)
+       eval(tokenizer, vqa_model.to(device) , small_val_dataset, device)
+       # eval(tokenizer, vqa_model, small_val_dataset, device, batch_size=16)
        
        # trainer.save_model("test-squad-trained")
        # logger.info("Model saved!")

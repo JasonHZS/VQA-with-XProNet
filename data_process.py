@@ -3,9 +3,9 @@ import json
 import torch 
 import open_clip
 from PIL import Image
+from datasets import Dataset
 import numpy as np  
 from loguru import logger
-from datasets import Dataset
 from open_clip import tokenizer as clip_tokenizer
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 
@@ -168,17 +168,6 @@ def select_device():
               device = torch.device("cpu")  # 如果都不可用，使用CPU
               print("Using CPU")
        return device
-   
-def get_clip_dim(train_dataset, clip_preprocess, clip_tokenizer):
-    image = Image.open(train_dataset[0]['image_name']).convert("RGB")
-    image_input = clip_preprocess(image).unsqueeze(0).to(device)  # Unsqueeze 添加一个批次维度
-    text_tokens = clip_tokenizer.tokenize(train_dataset[0]['context']).to(device)
-
-    with torch.no_grad():
-        image_features = clip_model.encode_image(image_input).float()
-        text_features = clip_model.encode_text(text_tokens).float()
-        
-    return image_features.shape, text_features.shape
 
 def process_combine_data(batch):
     # 处理一批图像数据
@@ -245,6 +234,7 @@ def process_data_and_save(mydataset, delect_cols, save_dir):
     
     tokenized_combine_dataset.save_to_disk(save_dir)
     logger.info('数据集保存完毕')
+    return tokenized_combine_dataset
    
    
 if __name__ == '__main__':
@@ -285,5 +275,8 @@ if __name__ == '__main__':
     small_val_dataset = validation_dataset.select(indices)
     delect_cols = ['key', 'image_name']
     save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val'
-    process_data_and_save(small_val_dataset, delect_cols, save_dir)
+    tokenized_combine_dataset = process_data_and_save(small_val_dataset, delect_cols, save_dir)
+    # logger.info(f"type: {type(tokenized_combine_dataset[0]['combined_features'])}")
+    # logger.info(f"len: {len(tokenized_combine_dataset[0]['combined_features'])}")
+    # logger.info(f"sample: {tokenized_combine_dataset[0]['combined_features'][:10]}")
 
