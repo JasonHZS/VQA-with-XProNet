@@ -12,7 +12,7 @@ from preprocess import preprocess
 from dataset import VQADataset, VQABatchSampler
 from train import train_model, test_model
 # from vqa_mutan_bilstm import VQAModel as VQAModel
-from vqa import VQAModel
+from first_experiment.vqa import VQAModel
 from san import SANModel
 from scheduler import CustomReduceLROnPlateau
 

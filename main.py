@@ -76,7 +76,7 @@ if __name__ == '__main__':
               learning_rate=0.01,
               per_device_train_batch_size=batch_size,
               per_device_eval_batch_size=batch_size,
-              num_train_epochs=1,
+              num_train_epochs=3,
               weight_decay=0.01,
               logging_steps=5,
               gradient_accumulation_steps=4,

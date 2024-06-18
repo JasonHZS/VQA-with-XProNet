@@ -258,7 +258,7 @@ if __name__ == '__main__':
         
     # logger.info('开始加载训练数据集')
     # train_dataset = load_datasets(train_data_dir, sub_folders_train, img_dir)
-    # indices = np.random.permutation(len(train_dataset))[:6000]
+    # indices = np.random.permutation(len(train_dataset))
     # # 使用选定的索引切割数据集
     # small_train_dataset = train_dataset.select(indices)
     # delect_cols = train_dataset.column_names
@@ -270,12 +270,13 @@ if __name__ == '__main__':
     logger.info('开始加载测试数据集')
     validation_dataset = load_datasets(test_data_dir, sub_folders_test, img_dir) 
     # validation_dataset.save_to_disk('/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/origin_val')
-    indices = np.random.permutation(len(validation_dataset))[:2000]
+    indices = np.random.permutation(len(validation_dataset))
     # 使用选定的索引切割数据集
     small_val_dataset = validation_dataset.select(indices)
     delect_cols = ['key', 'image_name']
     save_dir = '/root/autodl-tmp/vqa/VQA-with-XProNet/saved_data/val'
     tokenized_combine_dataset = process_data_and_save(small_val_dataset, delect_cols, save_dir)
+    
     # logger.info(f"type: {type(tokenized_combine_dataset[0]['combined_features'])}")
     # logger.info(f"len: {len(tokenized_combine_dataset[0]['combined_features'])}")
     # logger.info(f"sample: {tokenized_combine_dataset[0]['combined_features'][:10]}")
